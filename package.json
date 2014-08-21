@@ -1,5 +1,10 @@
 {
-	"name": "tmi-irc-relay",
-	"description": "Relays Twitch's TMI interface with better IRC client support",
-	"license": "MIT"
+  "name": "tmi-irc-relay",
+  "description": "Relays Twitch's TMI interface with better IRC client support",
+  "license": "MIT",
+  "dependencies": {
+    "irc-message": "^2.0.1",
+    "lstream": "0.0.4",
+    "request": "^2.40.0"
+  }
 }
