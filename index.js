@@ -23,9 +23,9 @@ var server = net.createServer(function(socket) {
         Object.keys(socket.channels).forEach(function(channel) {
             clearInterval(socket.channels[channel].timer);
         });
-        delete socket.irc;
-        delete socket.messageStream;
-        delete socket.outgoingMessageStream;
+        socket.irc.destroy();
+        socket.destroy();
+        delete socket;
     });
 
     socket.outgoingMessageStream.on('data', function(data) {
