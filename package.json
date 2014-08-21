@@ -1,0 +1,5 @@
+{
+	"name": "tmi-irc-relay",
+	"description": "Relays Twitch's TMI interface with better IRC client support",
+	"license": "MIT"
+}
