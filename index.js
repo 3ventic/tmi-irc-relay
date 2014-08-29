@@ -56,7 +56,16 @@ function parseIncoming(socket, data) {
         
         var userList = socket.channels[channel].users;
 
-        if(jtvData[0] === 'SPECIALUSER') {
+        var subscribers = /^This room is (now|no longer) in subscribers-only mode\.$/.test(message.params[1]);
+
+        var slowMode = /^This room is (now|no longer) in slow mode\./.test(message.params[1]);
+        
+        if(jtvData[0] === 'HOSTTARGET') {
+            if (jtvData[1] !== '-') {
+                socket.write(':Twitch NOTICE '+channel+' :Now hosting '+jtvData[1]+' with '+jtvData[2]+' viewers\r\n');
+            }
+        }
+        else if(jtvData[0] === 'SPECIALUSER') {
             var user = jtvData[1];
 
             if(!userList[user]) {
@@ -96,9 +105,7 @@ function parseIncoming(socket, data) {
                 socket.write(':Twitch MODE '+channel+' +v '+user+'\r\n');
             }
         }
-
-        var subscribers = /^This room is (now|no longer) in subscribers-only mode\.$/.test(message.params[1]);
-        if(subscribers) {
+        else if(subscribers) {
             if(message.params[1].indexOf('now') !== -1) {
                 subTopic[channel] = ' | Subscribers-only enabled';
                 socket.write(':Twitch MODE '+channel+' +m\r\n');
@@ -109,9 +116,7 @@ function parseIncoming(socket, data) {
                 socket.write(':Twitch TOPIC '+channel+' '+slowTopic[channel]+subTopic[channel]+'\r\n');
             }
         }
-
-        var slowMode = /^This room is (now|no longer) in slow mode\./.test(message.params[1]);
-        if(slowMode) {
+        else if(slowMode) {
             if(message.params[1].indexOf('now') !== -1) {
                 var slowTime = /You may send messages every ([0-9]+) seconds/.exec(message.params[1]);
                 slowTopic[channel] = 'Slow mode is '+slowTime[1].trim()+' seconds';
@@ -122,6 +127,18 @@ function parseIncoming(socket, data) {
                 socket.write(':Twitch MODE '+channel+' -f\r\n');
                 socket.write(':Twitch TOPIC '+channel+' '+slowTopic[channel]+subTopic[channel]+'\r\n');
             }
+        }
+        else if(jtvData[0].match(/(?:Now|Exited|USERCOLOR|EMOTESET)/)) {
+            return;
+        }
+        else {
+            var params = '';
+            var length = message.params.length;
+            for (var i = 0; i < length; i++) {
+                params += ' ' + message.params[i];
+            }
+            params = params.trim();
+            socket.write(':Twitch NOTICE '+channel+' :'+params+'\r\n');
         }
         return;
     }
