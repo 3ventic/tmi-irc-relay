@@ -256,7 +256,7 @@ function parseOutgoing(socket, data) {
     
     else if(message.command.toUpperCase() === 'SLOW') {
         if(!message.params[1]) message.params[1] = '120';
-        socket.irc.write(':tmi.twitch.tv PRIVMSG '+message.params[0]+' :/slow '+message.params[1].trim()+' '+message.params[2].trim()+'\r\n');
+        socket.irc.write(':tmi.twitch.tv PRIVMSG '+message.params[0]+' :/slow '+message.params[1].trim()+'\r\n');
         return;
     }
 
