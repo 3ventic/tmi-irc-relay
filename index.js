@@ -327,7 +327,7 @@ function parseOutgoing(socket, data) {
     else {
         var params = '';
         var length = message.params.length;
-        for (var i = 0; i < length; i++) {
+        for (var i = 1; i < length; i++) {
             params += ' ' + message.params[i];
         }
         params = params.trim();
