@@ -128,13 +128,13 @@ function parseIncoming(socket, data) {
                 socket.write(':Twitch TOPIC '+channel+' '+slowTopic[channel]+subTopic[channel]+'\r\n');
             }
         }
-        else if(jtvData[0].match(/(?:Now|Exited|USERCOLOR|EMOTESET)/)) {
+        else if(jtvData[0].match(/(?:Now|USERCOLOR|EMOTESET)/)) {
             return;
         }
         else {
             var params = '';
             var length = message.params.length;
-            for (var i = 0; i < length; i++) {
+            for (var i = 1; i < length; i++) {
                 params += ' ' + message.params[i];
             }
             params = params.trim();
