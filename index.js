@@ -139,7 +139,7 @@ function parseOutgoing(socket, data) {
         socket.write(':tmi.twitch.tv 005 '+socket.nick+' PREFIX=(qaohv)~&@$+ CHANTYPES=# NETWORK=Twitch :are supported by this server\r\n');
     }
 
-    if(message.command === 'JOIN') {
+    else if(message.command === 'JOIN') {
         message.params[0].split(',').forEach(function(channel) {
             socket.channels[channel] = {
                 users: {},
@@ -240,7 +240,7 @@ function parseOutgoing(socket, data) {
         });
     }
 
-    if(message.command === 'PART') {
+    else if(message.command === 'PART') {
         message.params[0].split(',').forEach(function(channel) {
             if(socket.channels[channel]) {
                 clearInterval(socket.channels[channel].timer);
@@ -249,25 +249,31 @@ function parseOutgoing(socket, data) {
         });
     }
 
-    if(message.command === 'ISON') {
+    else if(message.command === 'ISON') {
         socket.write(':tmi.twitch.tv 303 '+socket.nick+' :'+message.params.join(' ')+'\r\n');
         return;
     }
+    
+    else if(message.command === 'SLOW') {
+        if(!message.params[2]) message.params[2] = '120';
+        socket.irc.write(':tmi.twitch.tv PRIVMSG '+message.params[0]+' :/slow '+message.params[1].trim()+' '+message.params[2].trim()+'\r\n');
+        return;
+    }
 
-    if(message.command === 'KICK' || message.command.toUpperCase() === 'TIMEOUT') {
+    else if(message.command === 'KICK' || message.command.toUpperCase() === 'TIMEOUT') {
         if(!message.params[2]) message.params[2] = '600';
         socket.irc.write(':tmi.twitch.tv PRIVMSG '+message.params[0]+' :/timeout '+message.params[1].trim()+' '+message.params[2].trim()+'\r\n');
         socket.write(':Twitch NOTICE '+message.params[0]+' :You have timed out '+message.params[1].trim()+' for '+message.params[2]+' seconds.'+'\r\n');
         return;
     }
     
-    if(message.command.match(/^(?:un)?ban$/i)) {
+    else if(message.command.match(/^(?:un)?ban$/i)) {
         socket.irc.write(':tmi.twitch.tv PRIVMSG '+message.params[0]+' :/'+message.command.toLowerCase()+' '+message.params[1].trim()+'\r\n');
         socket.write(':Twitch NOTICE '+message.params[0]+' :You have '+message.command.toLowerCase()+'ned '+message.params[1].trim()+'\r\n');
         return;
     }
 
-    if(message.command === 'MODE') {
+    else if(message.command === 'MODE') {
         if(message.params[1] === '+b' || message.params[1] === '-b') {
             if(!message.params[2]) return;
 
@@ -296,9 +302,19 @@ function parseOutgoing(socket, data) {
         return;
     }
 
-    if(message.command === 'WHO') {
+    else if(message.command === 'WHO') {
         socket.write(':tmi.twitch.tv 315 '+socket.nick+' '+message.params[0]+' :End of /WHO list.'+'\r\n');
         return;
+    }
+    
+    else {
+        var params = '';
+        var length = message.params.length;
+        for (var i = 0; i < length; i++) {
+            params += ' ' + message.params[i];
+        }
+        params = params.trim();
+        socket.irc.write(':tmi.twitch.tv PRIVMSG '+message.params[0]+' :/'+message.command.toLowerCase()+' '+params+'\r\n');
     }
     
     socket.irc.write(data+'\r\n');
