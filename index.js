@@ -128,6 +128,9 @@ function parseIncoming(socket, data) {
                 socket.write(':Twitch TOPIC '+channel+' '+slowTopic[channel]+subTopic[channel]+'\r\n');
             }
         }
+        else if(jtvData[0] === 'CLEARCHAT') {
+            socket.write(':Twitch NOTICE '+channel+' :'+jtvData[1]+' has been timed out or banned\r\n');
+        }
         else if(jtvData[0].match(/(?:Now|USERCOLOR|EMOTESET)/)) {
             return;
         }
