@@ -147,15 +147,6 @@ function parseOutgoing(socket, data) {
                 timer: setInterval(function() { socket.channels[channel].update() }, 20000),
                 update: function() {
                     request.get({
-                        url: 'https://api.twitch.tv/kraken/channels/'+channel.replace('#',''),
-                        json: true
-                    }, function(err, res, data) {
-                        if(data.status && socket.channels[channel].topic !== data.status) {
-                            socket.channels[channel].topic = data.status;
-                            socket.write(':Twitch TOPIC '+channel+' :'+data.status+'\r\n');
-                        } 
-                    });
-                    request.get({
                         url: 'https://tmi.twitch.tv/group/user/'+channel.replace('#','')+'/chatters',
                         json: true
                     }, function(err, res, data) {
