@@ -170,6 +170,10 @@ function parseOutgoing(socket, data) {
                         url: 'https://tmi.twitch.tv/group/user/'+channel.replace('#','')+'/chatters',
                         json: true
                     }, function(err, res, data) {
+                        if (err) {
+                            console.log("Error: " + err);
+                            return;
+                        }
                         var userList = socket.channels[channel].users;
 
                         if(data.chatters) {
@@ -264,7 +268,9 @@ function parseOutgoing(socket, data) {
         message.params[0].split(',').forEach(function(channel) {
             if(socket.channels[channel]) {
                 clearInterval(socket.channels[channel].timer);
-                delete socket.channels[channel];
+                setTimeout(function () {
+                    delete socket.channels[channel];
+                }, 10);
             }
         });
     }
