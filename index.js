@@ -15,7 +15,8 @@ var server = net.createServer(function(socket) {
     socket.channels = {};
 
     socket.irc = new net.Socket();
-    socket.irc.connect(6667, 'irc.twitch.tv');
+    socket.irc.connect(6667, 'irc.twitch.tv'); // Normal chat
+    //socket.irc.connect(80, '199.9.250.117'); // Event chat
     socket.irc.pipe(socket.messageStream);
 
     socket.messageStream.on('data', function(data) {
