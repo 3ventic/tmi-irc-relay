@@ -31,6 +31,12 @@ var server = net.createServer(function(socket) {
         socket.destroy();
         delete socket;
     });
+    socket.on('error', function(e) {
+        console.log(e);
+    });
+    socket.irc.on('error', function(e) {
+        console.log(e);
+    });
 
     socket.outgoingMessageStream.on('data', function(data) {
         parseOutgoing(socket, data);
@@ -173,6 +179,10 @@ function parseOutgoing(socket, data) {
                     }, function(err, res, data) {
                         if (err) {
                             console.log("Error: " + err);
+                            return;
+                        }
+                        // Check the channel wasn't parted during the request, which can take a long time
+                        if (!(channel in socket.channels)) {
                             return;
                         }
                         var userList = socket.channels[channel].users;
