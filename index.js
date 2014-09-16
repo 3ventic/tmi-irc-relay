@@ -344,16 +344,6 @@ function parseOutgoing(socket, data) {
         return;
     }
     
-    else {
-        var params = '';
-        var length = message.params.length;
-        for (var i = 1; i < length; i++) {
-            params += ' ' + message.params[i];
-        }
-        params = params.trim();
-        socket.irc.write(':tmi.twitch.tv PRIVMSG '+message.params[0]+' :/'+message.command.toLowerCase()+' '+params+'\r\n');
-    }
-    
     socket.irc.write(data+'\r\n');
 }
 
