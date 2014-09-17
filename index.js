@@ -171,7 +171,18 @@ function parseOutgoing(socket, data) {
             socket.channels[channel] = {
                 users: {},
                 topic: 'Welcome to the channel!',
-                timer: setInterval(function() { socket.channels[channel].update() }, 20000),
+                timer: setInterval(function() {
+                    // Seems to crash without this check, perhaps the client isn't sending a full PART, but simply closes the socket?
+                    if (channel in socket.channels) {
+                        socket.channels[channel].update();
+                    }
+                    else {
+                        clearInterval(socket.channels[channel].timer);
+                        setTimeout(function () {
+                            delete socket.channels[channel];
+                        }, 10);
+                    }
+                }, 20000),
                 update: function() {
                     request.get({
                         url: 'https://tmi.twitch.tv/group/user/'+channel.replace('#','')+'/chatters',
