@@ -1,3 +1,6 @@
+// Keep as false unless you know what you're doing
+var eventchat = false;
+
 var net = require('net');
 var Message = require("irc-message").parseMessage;
 var IRCMessage = require("irc-message").IRCMessage;
@@ -15,8 +18,12 @@ var server = net.createServer(function(socket) {
     socket.channels = {};
 
     socket.irc = new net.Socket();
-    socket.irc.connect(6667, 'irc.twitch.tv'); // Normal chat
-    //socket.irc.connect(80, '199.9.250.117'); // Event chat
+    if (eventchat) {
+        socket.irc.connect(80, '199.9.250.117');
+    }
+    else {
+        socket.irc.connect(6667, 'irc.twitch.tv');
+    }
     socket.irc.pipe(socket.messageStream);
 
     socket.messageStream.on('data', function(data) {
@@ -177,7 +184,7 @@ function parseOutgoing(socket, data) {
                         socket.channels[channel].update();
                     }
                     else {
-                        clearInterval(socket.channels[channel].timer);
+                        if (timer in socket.channels[channel]) clearInterval(socket.channels[channel].timer);
                         setTimeout(function () {
                             delete socket.channels[channel];
                         }, 10);
@@ -358,4 +365,5 @@ function parseOutgoing(socket, data) {
     socket.irc.write(data+'\r\n');
 }
 
-server.listen(6969);
+if (eventchat) server.listen(6970);
+else server.listen(6969);
