@@ -227,6 +227,8 @@ function parseOutgoing(socket, data) {
                             
                             for(var i=0; i<chatterTypes.length; i++) {
                                 data.chatters[chatterTypes[i]].forEach(function(user) {
+                                    var pushing = false;
+                                    var special = false;
                                     if(!userList[user]) {
                                         userList[user] = {
                                             owner: false,
@@ -236,30 +238,39 @@ function parseOutgoing(socket, data) {
                                             admin: false,
                                             staff: false
                                         }
-                                        joins.push(user);
+                                        pushing = true;
                                     }
 
                                     if(channel.replace('#','') === user && !userList[user].owner) {
                                         userList[user].owner = true;
                                         modes.push('+o '+user);
+                                        special = true;
                                     }
 
                                     if(chatterTypes[i] === 'moderators' && !userList[user].moderator) {
                                         userList[user].moderator = true;
                                         modes.push('+o '+user);
+                                        special = true;
                                     } else if(chatterTypes[i] === 'viewers' && userList[user].moderator && data.chatters['moderators'].length > 0) {
                                         userList[user].moderator = false;
                                         modes.push('-o '+user);
+                                        special = true;
                                     }
 
                                     if(chatterTypes[i] === 'staff' && !userList[user].staff) {
                                         userList[user].staff = true;
                                         modes.push('+qo '+user);
+                                        special = true;
                                     }
 
                                     if(chatterTypes[i] === 'admins' && !userList[user].admin) {
                                         userList[user].admin = true;
                                         modes.push('+ao '+user);
+                                        special = true;
+                                    }
+                                    
+                                    if(pushing && (data.chatters.viewers.length < 5000 || special)) {
+                                        joins.push(user);
                                     }
                                 });
                             }
