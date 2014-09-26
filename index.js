@@ -189,7 +189,7 @@ function parseOutgoing(socket, data) {
                             delete socket.channels[channel];
                         }, 10);
                     }
-                }, 20000),
+                }, 30000),
                 update: function() {
                     request.get({
                         url: 'https://tmi.twitch.tv/group/user/'+channel.replace('#','')+'/chatters',
