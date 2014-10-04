@@ -36,6 +36,7 @@ var server = net.createServer(function(socket) {
         });
         socket.irc.destroy();
         socket.destroy();
+        socket = null;
         delete socket;
     });
     socket.on('error', function(e) {
@@ -65,8 +66,8 @@ function parseIncoming(socket, data) {
 
         if(channel === socket.nick || !socket.channels[channel]) return;
         
-        if(!(channel in slowTopic)) slowTopic[channel] = '';
-        if(!(channel in subTopic)) subTopic[channel] = '';
+        if(!(channel in slowTopic)) slowTopic[channel] = 'Slow mode is unknown';
+        if(!(channel in subTopic)) subTopic[channel] = ' | Subscribers-only unknown';
         
         var userList = socket.channels[channel].users;
 
@@ -123,11 +124,11 @@ function parseIncoming(socket, data) {
             if(message.params[1].indexOf('now') !== -1) {
                 subTopic[channel] = ' | Subscribers-only enabled';
                 socket.write(':Twitch MODE '+channel+' +m\r\n');
-                socket.write(':Twitch TOPIC '+channel+' '+slowTopic[channel]+subTopic[channel]+'\r\n');
+                socket.write(':Twitch TOPIC '+channel+' :'+slowTopic[channel]+subTopic[channel]+'\r\n');
             } else {
-                subTopic[channel] = '';
+                subTopic[channel] = ' | Subscribers-only disabled';
                 socket.write(':Twitch MODE '+channel+' -m\r\n');
-                socket.write(':Twitch TOPIC '+channel+' '+slowTopic[channel]+subTopic[channel]+'\r\n');
+                socket.write(':Twitch TOPIC '+channel+' :'+slowTopic[channel]+subTopic[channel]+'\r\n');
             }
         }
         else if(slowMode) {
@@ -135,11 +136,11 @@ function parseIncoming(socket, data) {
                 var slowTime = /You may send messages every ([0-9]+) seconds/.exec(message.params[1]);
                 slowTopic[channel] = 'Slow mode is '+slowTime[1].trim()+' seconds';
                 socket.write(':Twitch MODE '+channel+' +f '+slowTime[1].trim()+'s\r\n');
-                socket.write(':Twitch TOPIC '+channel+' '+slowTopic[channel]+subTopic[channel]+'\r\n');
+                socket.write(':Twitch TOPIC '+channel+' :'+slowTopic[channel]+subTopic[channel]+'\r\n');
             } else {
                 slowTopic[channel] = 'Slow mode is disabled';
                 socket.write(':Twitch MODE '+channel+' -f\r\n');
-                socket.write(':Twitch TOPIC '+channel+' '+slowTopic[channel]+subTopic[channel]+'\r\n');
+                socket.write(':Twitch TOPIC '+channel+' :'+slowTopic[channel]+subTopic[channel]+'\r\n');
             }
         }
         else if(jtvData[0] === 'CLEARCHAT') {
@@ -185,9 +186,7 @@ function parseOutgoing(socket, data) {
                     }
                     else {
                         if (timer in socket.channels[channel]) clearInterval(socket.channels[channel].timer);
-                        setTimeout(function () {
-                            delete socket.channels[channel];
-                        }, 10);
+                        delete socket.channels[channel];
                     }
                 }, 30000),
                 update: function() {
@@ -196,7 +195,7 @@ function parseOutgoing(socket, data) {
                         json: true
                     }, function(err, res, data) {
                         if (err) {
-                            console.log("Error: " + err);
+                            console.log(err);
                             return;
                         }
                         // Check the channel wasn't parted during the request, which can take a long time
@@ -296,9 +295,7 @@ function parseOutgoing(socket, data) {
         message.params[0].split(',').forEach(function(channel) {
             if(socket.channels[channel]) {
                 clearInterval(socket.channels[channel].timer);
-                setTimeout(function () {
-                    delete socket.channels[channel];
-                }, 10);
+                delete socket.channels[channel];
             }
         });
     }
