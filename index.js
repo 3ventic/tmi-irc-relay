@@ -171,7 +171,7 @@ function parseOutgoing(socket, data) {
     if(message.command === 'NICK') {
         socket.nick = message.params[0].trim();
         socket.irc.write('TWITCHCLIENT 3'+'\r\n');
-        socket.write(':tmi.twitch.tv 005 '+socket.nick+' PREFIX=(qaohv)~&@$+ CHANTYPES=# NETWORK=Twitch :are supported by this server\r\n');
+        socket.write(':tmi.twitch.tv 005 '+socket.nick+' PREFIX=(qaohv)~&@%+ CHANTYPES=# NETWORK=Twitch :are supported by this server\r\n');
     }
 
     else if(message.command === 'JOIN') {
