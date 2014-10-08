@@ -176,7 +176,6 @@ function parseOutgoing(socket, data) {
 
     else if(message.command === 'JOIN') {
         message.params[0].split(',').forEach(function(channel) {
-            socket.write(':' + socket.nick + '!' + socket.nick + '@' + socket.nick + '.tmi.twitch.tv JOIN :' + channel + "\r\n");
             socket.channels[channel] = {
                 users: {},
                 topic: 'Welcome to the channel!',
@@ -266,7 +265,7 @@ function parseOutgoing(socket, data) {
                             if(joins.length < 100) {
                                 while(joins.length) {
                                     var user = joins.splice(0, 1).toString();
-                                    socket.write(':'+user+'!'+user+'@'+user+'.tmi.twitch.tv JOIN '+channel+'\r\n');
+                                    if (user != socket.nick) socket.write(':'+user+'!'+user+'@'+user+'.tmi.twitch.tv JOIN '+channel+'\r\n');
                                 }
                                 while(parts.length) {
                                     var user = parts.splice(0, 1).toString();
