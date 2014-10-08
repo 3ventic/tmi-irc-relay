@@ -176,7 +176,7 @@ function parseOutgoing(socket, data) {
 
     else if(message.command === 'JOIN') {
         message.params[0].split(',').forEach(function(channel) {
-            socket.write(':' + socket.nick + '!' + socket.nick + '@' + socket.nick + '.tmi.twitch.tv JOIN :' + channel);
+            socket.write(':' + socket.nick + '!' + socket.nick + '@' + socket.nick + '.tmi.twitch.tv JOIN :' + channel + "\r\n");
             socket.channels[channel] = {
                 users: {},
                 topic: 'Welcome to the channel!',
