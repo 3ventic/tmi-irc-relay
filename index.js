@@ -187,7 +187,8 @@ function parseOutgoing(socket, data) {
                 update: function() {
                     request.get({
                         url: 'https://tmi.twitch.tv/group/user/'+channel.replace('#','')+'/chatters',
-                        json: true
+                        json: true,
+                        timeout: 14000
                     }, function(err, res, data) {
                         if (err) {
                             console.log(err);
