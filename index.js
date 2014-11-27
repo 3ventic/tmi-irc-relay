@@ -87,7 +87,7 @@ function parseIncoming(socket, data) {
             if (channel.replace('#', '') === user && !userList[user].owner) {
                 userList[user].owner = true;
                 userList[user].moderator = true;
-                socket.write(':Twitch MODE ' + channel + ' +' + config.broadcasterMode + 'o ' + user + ' ' + user + '\r\n');
+                socket.write(':Twitch MODE ' + channel + ' +' + config.broadcasterMode + 'o ' + user + '\r\n');
             }
 
             if (jtvData[2] === 'staff' && !userList[user].staff) {
@@ -263,7 +263,7 @@ function parseOutgoing(socket, data) {
                                         userList[user].admin = true;
                                         modes.push('+ao ' + user);
                                     }
-                                    else if (chatterTypes[i] === 'moderators' && !userList[user].moderator) {
+                                    else if (chatterTypes[i] === 'moderators' && !userList[user].moderator && !userList[user].owner) {
                                         userList[user].moderator = true;
                                         modes.push('+o ' + user);
                                     }
