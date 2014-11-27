@@ -176,7 +176,7 @@ function parseOutgoing(socket, data) {
                     if (socket.channels[channel]) {
                         socket.channels[channel].update();
                     }
-                }, 20000),
+                }, 30000),
                 update: function () {
                     request.get({
                         url: 'https://api.twitch.tv/kraken/channels/' + channel.replace('#', ''),
