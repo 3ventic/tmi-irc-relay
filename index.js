@@ -112,20 +112,20 @@ function parseIncoming(socket, data) {
         else if (subscribers) {
             if (message.params[1].indexOf('now') !== -1) {
                 socket.write(':Twitch MODE ' + channel + ' +m\r\n');
-                socket.write(':Twitch NOTICE ' + channel + ' :This channel is now in subscribers-only mode.\r\n');
+                if (config.sendChannelModeNotices) socket.write(':Twitch NOTICE ' + channel + ' :This channel is now in subscribers-only mode.\r\n');
             } else {
                 socket.write(':Twitch MODE ' + channel + ' -m\r\n');
-                socket.write(':Twitch NOTICE ' + channel + ' :This channel is no longer in subscribers-only mode.\r\n');
+                if (config.sendChannelModeNotices) socket.write(':Twitch NOTICE ' + channel + ' :This channel is no longer in subscribers-only mode.\r\n');
             }
         }
         else if (slowMode) {
             if (message.params[1].indexOf('now') !== -1) {
                 var slowTime = /You may send messages every ([0-9]+) seconds/.exec(message.params[1]);
                 socket.write(':Twitch MODE ' + channel + ' +f ' + slowTime[1].trim() + 's\r\n');
-                socket.write(':Twitch NOTICE ' + channel + ' :Slow mode activated at ' + slowTime[1].trim() + ' seconds\r\n');
+                if (config.sendChannelModeNotices) socket.write(':Twitch NOTICE ' + channel + ' :Slow mode activated at ' + slowTime[1].trim() + ' seconds\r\n');
             } else {
                 socket.write(':Twitch MODE ' + channel + ' -f\r\n');
-                socket.write(':Twitch NOTICE ' + channel + ' :Slow mode deactivated\r\n');
+                if (config.sendChannelModeNotices) socket.write(':Twitch NOTICE ' + channel + ' :Slow mode deactivated\r\n');
             }
         }
         else if (jtvData[0] === 'CLEARCHAT') {
