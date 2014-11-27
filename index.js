@@ -180,6 +180,10 @@ function parseOutgoing(socket, data) {
                             console.log(err);
                             return;
                         }
+                        // Check the channel wasn't parted during the request, which can take a long time
+                        if (!(channel in socket.channels)) {
+                            return;
+                        }
                         if (data.status && socket.channels[channel].topic !== data.status) {
                             socket.channels[channel].topic = data.status;
                             socket.write(':Twitch TOPIC ' + channel + ' :' + data.status + '\r\n');
