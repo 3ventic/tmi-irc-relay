@@ -174,7 +174,10 @@ function parseOutgoing(socket, data) {
                     request.get({
                         url: 'https://api.twitch.tv/kraken/channels/' + channel.replace('#', ''),
                         json: true,
-                        timeout: 14000
+                        timeout: 14000,
+                        headers: {
+                            'Client-ID': config.apiClientId
+                        }
                     }, function (err, res, data) {
                         if (err) {
                             console.log(err);
@@ -192,7 +195,10 @@ function parseOutgoing(socket, data) {
                     request.get({
                         url: 'https://tmi.twitch.tv/group/user/' + channel.replace('#', '') + '/chatters',
                         json: true,
-                        timeout: 14000
+                        timeout: 14000,
+                        headers: {
+                            'Client-ID': config.apiClientId
+                        }
                     }, function (err, res, data) {
                         if (err) {
                             console.log(err);
