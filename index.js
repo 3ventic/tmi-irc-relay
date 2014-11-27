@@ -151,8 +151,7 @@ function parseIncoming(socket, data) {
         return;
     }
 
-    // Let's not send Twitch's 005, but our own instead
-    if (data.indexOf(":tmi.twitch.tv 005") != 0) socket.write(data + '\r\n');
+    socket.write(data + '\r\n');
 }
 
 function parseOutgoing(socket, data) {
