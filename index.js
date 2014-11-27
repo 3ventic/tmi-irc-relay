@@ -112,21 +112,25 @@ function parseIncoming(socket, data) {
         else if (subscribers) {
             if (message.params[1].indexOf('now') !== -1) {
                 socket.write(':Twitch MODE ' + channel + ' +m\r\n');
+                socket.write(':Twitch NOTICE ' + channel + ' :This channel is now in subscribers-only mode.\r\n');
             } else {
                 socket.write(':Twitch MODE ' + channel + ' -m\r\n');
+                socket.write(':Twitch NOTICE ' + channel + ' :This channel is no longer in subscribers-only mode.\r\n');
             }
         }
         else if (slowMode) {
             if (message.params[1].indexOf('now') !== -1) {
                 var slowTime = /You may send messages every ([0-9]+) seconds/.exec(message.params[1]);
                 socket.write(':Twitch MODE ' + channel + ' +f ' + slowTime[1].trim() + 's\r\n');
+                socket.write(':Twitch NOTICE ' + channel + ' :Slow mode activated at ' + slowTime[1].trim() + ' seconds\r\n');
             } else {
                 socket.write(':Twitch MODE ' + channel + ' -f\r\n');
+                socket.write(':Twitch NOTICE ' + channel + ' :Slow mode deactivated\r\n');
             }
         }
         else if (jtvData[0] === 'CLEARCHAT') {
             if (typeof jtvData[1] == "undefined") {
-                socket.write(':Twitch NOTICE ' + channel + ' :Chat was cleared by a moderator (prevented by IRC)');
+                socket.write(':Twitch NOTICE ' + channel + ' :Chat was cleared by a moderator (prevented by IRC)\r\n');
             }
             else {
                 socket.write(':Twitch NOTICE ' + channel + ' :' + jtvData[1] + ' has been timed out or banned\r\n');
@@ -147,7 +151,8 @@ function parseIncoming(socket, data) {
         return;
     }
 
-    socket.write(data + '\r\n');
+    // Let's not send Twitch's 005, but our own instead
+    if (data.indexOf(":tmi.twitch.tv 005") != 0) socket.write(data + '\r\n');
 }
 
 function parseOutgoing(socket, data) {
@@ -157,7 +162,7 @@ function parseOutgoing(socket, data) {
     if (message.command === 'NICK') {
         socket.nick = message.params[0].trim();
         socket.irc.write('TWITCHCLIENT 3' + '\r\n');
-        socket.write(':tmi.twitch.tv 005 ' + socket.nick + ' PREFIX=(qaohv)~&@$+ CHANTYPES=# CHANMODES=mf NETWORK=Twitch :are supported by this server\r\n');
+        socket.write(':tmi.twitch.tv 005 ' + socket.nick + ' PREFIX=(qaohv)~&@$+ CHANTYPES=# CHANMODES=fm NETWORK=Twitch :are supported by this server\r\n');
     }
 
     else if (message.command === 'JOIN') {
