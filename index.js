@@ -285,7 +285,37 @@ function parseOutgoing(socket, data) {
                                 }
                             } else {
                                 while (newUsers.length) {
-                                    var users = newUsers.splice(0, 15).join(' ');
+                                    var users = newUsers.splice(0, 15);
+                                    // Include modes
+                                    for (var i = 0; i < users.length; i++) {
+                                        var modeChars = "";
+                                        var letterToChar = {
+                                            q: '~',
+                                            a: '&',
+                                            o: '@',
+                                            h: '%',
+                                            v: '+'
+                                        }
+                                        if (userList[users[i]].owner) {
+                                            modeChars += (config.broadcasterMode in letterToChar ? letterToChar[config.broadcasterMode] : '');
+                                            modeChars += '@';
+                                        }
+                                        if (userList[users[i]].staff) {
+                                            modeChars += (config.staffMode in letterToChar ? letterToChar[config.staffMode] : '');
+                                            if (modeChars.indexOf('@') === -1) modeChars += '@';
+                                        }
+                                        else if (userList[users[i]].admin) {
+                                            modeChars += '&';
+                                            if (modeChars.indexOf('@') === -1) modeChars += '@';
+                                        }
+                                        else if (userList[users[i]].moderator && modeChars.indexOf('@') === -1) modeChars += '@';
+
+                                        if (userList[users[i]].subscriber) modeChars += '%';
+                                        if (userList[users[i]].turbo) modeChars += '+';
+
+                                        users[i] = modeChars + users[i];
+                                    }
+                                    users = users.join(' ');
                                     socket.write(':tmi.twitch.tv 353 ' + socket.nick + ' = ' + channel + ' :' + users + '\r\n');
                                 }
                                 socket.write(':tmi.twitch.tv 366 ' + socket.nick + ' ' + channel + ' :End of /NAMES list\r\n');
