@@ -155,7 +155,7 @@ function parseIncoming(socket, data) {
 
     // Send 005 in the correct position
     if (data.indexOf(":tmi.twitch.tv 004") == 0)
-        socket.write(':tmi.twitch.tv 005 ' + socket.nick + ' PREFIX=(qaohv)~&@%+ CHANTYPES=# CHANMODES=fm NETWORK=Twitch :are supported by this server\r\n');
+        socket.write(':tmi.twitch.tv 005 ' + socket.nick + ' PREFIX=(qaohv)~&@%+ CHANTYPES=# CHANMODES=b,f,,m NETWORK=Twitch :are supported by this server\r\n');
 }
 
 function parseOutgoing(socket, data) {
