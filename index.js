@@ -430,10 +430,11 @@ function sendInParts(socket, data) {
 
     var messageStart = tags + ':' + message.prefix + ' ' + message.command + ' ' + message.params[0] + ' :';
 
-    // Split the message part of the message so the "header" + chunk is 510 and send them off
-    var splitRegex = new RegExp('.{1,' + (510 - messageStart.length) + '}', 'g');
-    var messagePartsToSend = data.replace(messageStart, '').match(splitRegex);
-    for (var i = 0; i < messagePartsToSend.length; i++) {
-        socket.write(messageStart + messagePartsToSend[i] + '\r\n');
+    // Send the message in 510 chunks
+    var messageEnd = data.replace(messageStart, '');
+    var messageLength = (510 - messageStart.length);
+    var messageCount = Math.ceil(messageEnd.length / messageLength);
+    for (var i = 0; i < messageCount; i++)  {
+        socket.write(messageStart + messageEnd.substr(i * messageLength, messageLength) + '\r\n');
     }
 }
