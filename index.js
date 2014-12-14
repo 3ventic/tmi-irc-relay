@@ -146,12 +146,12 @@ function parseIncoming(socket, data) {
                 params += ' ' + message.params[i];
             }
             params = params.trim();
-            socket.write(':Twitch NOTICE ' + channel + ' :' + params + '\r\n');
+            sendInParts(socket, ':Twitch NOTICE ' + channel + ' :' + params + '\r\n');
         }
         return;
     }
 
-    socket.write(data + '\r\n');
+    sendInParts(socket, data);
 
     // Send 005 in the correct position
     if (data.indexOf(":tmi.twitch.tv 004") == 0)
@@ -404,3 +404,36 @@ function parseOutgoing(socket, data) {
 }
 
 server.listen(config.relayPort);
+
+function sendInParts(socket, data) {
+    // Message is already short enough
+    if (data.length < 510) {
+        socket.write(data + '\r\n');
+        return;
+    }
+    // Split messages into 512 chunks
+    var message = Message(data);
+
+    // Reconstruct the message "header"
+    var tags = '';
+    if (message.tags.length > 0) {
+        tags = '@';
+        for (var key in message.tags) {
+            if (message.tags.hasOwnProperty(key)) {
+                tags += key;
+                if (message.tags[key] !== true) tags += "=" + message.tags[key];
+                tags += ';';
+            }
+        }
+        tags = tags.slice(0, -1) + " ";
+    }
+
+    var messageStart = tags + ':' + message.prefix + ' ' + message.command + ' ' + message.params[0] + ' :';
+
+    // Split the message part of the message so the "header" + chunk is 510 and send them off
+    var splitRegex = new RegExp('.{1,' + (510 - messageStart.length) + '}', 'g');
+    var messagePartsToSend = data.replace(messageStart, '').match(splitRegex);
+    for (var i = 0; i < messagePartsToSend.length; i++) {
+        socket.write(messageStart + messagePartsToSend[i] + '\r\n');
+    }
+}
