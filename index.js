@@ -95,7 +95,7 @@ function parseIncoming(socket, data) {
                 userList[user].moderator = true;
                 socket.write(':Twitch MODE ' + channel + ' +' + config.staffMode + 'o ' + user + '\r\n');
             }
-            if (jtvData[2] === 'admin' && !userList[user].staff) {
+            if ((jtvData[2] === 'admin' || jtvData[2] === 'global_mod') && !userList[user].admin) {
                 userList[user].admin = true;
                 userList[user].moderator = true;
                 socket.write(':Twitch MODE ' + channel + ' +ao ' + user + '\r\n');
@@ -259,7 +259,7 @@ function parseOutgoing(socket, data) {
                                         userList[user].staff = true;
                                         modes.push('+' + config.staffMode + 'o ' + user);
                                     }
-                                    else if (chatterTypes[i] === 'admins' && !userList[user].admin) {
+                                    else if ((chatterTypes[i] === 'admins' || chatterTypes[i] === 'global_mods') && !userList[user].admin) {
                                         userList[user].admin = true;
                                         modes.push('+ao ' + user);
                                     }
