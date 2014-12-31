@@ -87,18 +87,18 @@ function parseIncoming(socket, data) {
             if (channel.replace('#', '') === user && !userList[user].owner) {
                 userList[user].owner = true;
                 userList[user].moderator = true;
-                socket.write(':Twitch MODE ' + channel + ' +' + config.broadcasterMode + 'o ' + user + '\r\n');
+                socket.write(':Twitch MODE ' + channel + ' +' + config.broadcasterMode + 'o ' + user + (config.broadcasterMode.length == 0 ? '' : ' ' + user) + '\r\n');
             }
 
             if (jtvData[2] === 'staff' && !userList[user].staff) {
                 userList[user].staff = true;
                 userList[user].moderator = true;
-                socket.write(':Twitch MODE ' + channel + ' +' + config.staffMode + 'o ' + user + '\r\n');
+                socket.write(':Twitch MODE ' + channel + ' +' + config.staffMode + 'o ' + user + (config.staffMode.length == 0 ? '' : ' ' + user) + '\r\n');
             }
             if ((jtvData[2] === 'admin' || jtvData[2] === 'global_mod') && !userList[user].admin) {
                 userList[user].admin = true;
                 userList[user].moderator = true;
-                socket.write(':Twitch MODE ' + channel + ' +ao ' + user + '\r\n');
+                socket.write(':Twitch MODE ' + channel + ' +ao ' + user + ' ' + user + '\r\n');
             }
             if (jtvData[2] === 'subscriber' && !userList[user].subscriber) {
                 userList[user].subscriber = true;
@@ -253,15 +253,15 @@ function parseOutgoing(socket, data) {
 
                                     if (channel.replace('#', '') === user && !userList[user].owner) {
                                         userList[user].owner = true;
-                                        modes.push('+' + config.broadcasterMode + 'o ' + user);
+                                        modes.push('+' + config.broadcasterMode + 'o ' + user + (config.broadcasterMode.length == 0 ? '' : ' ' + user));
                                     }
                                     if (chatterTypes[i] === 'staff' && !userList[user].staff) {
                                         userList[user].staff = true;
-                                        modes.push('+' + config.staffMode + 'o ' + user);
+                                        modes.push('+' + config.staffMode + 'o ' + user + (config.staffMode.length == 0 ? '' : ' ' + user));
                                     }
                                     else if ((chatterTypes[i] === 'admins' || chatterTypes[i] === 'global_mods') && !userList[user].admin) {
                                         userList[user].admin = true;
-                                        modes.push('+ao ' + user);
+                                        modes.push('+ao ' + user + ' ' + user);
                                     }
                                     else if (chatterTypes[i] === 'moderators' && !userList[user].moderator && !userList[user].owner) {
                                         userList[user].moderator = true;
@@ -404,6 +404,8 @@ function parseOutgoing(socket, data) {
 }
 
 server.listen(config.relayPort);
+
+console.log("Started");
 
 function sendInParts(socket, data) {
     // Message is already short enough
