@@ -194,139 +194,167 @@ function parseOutgoing(socket, data) {
                         if (!(channel in socket.channels)) {
                             return;
                         }
-                        if (data.status && socket.channels[channel].topic !== data.status) {
+                        if (data && data.status && socket.channels[channel].topic !== data.status) {
                             socket.channels[channel].topic = data.status;
                             socket.write(':Twitch TOPIC ' + channel + ' :' + data.status + '\r\n');
                         }
                     });
-                    request.get({
-                        url: 'https://tmi.twitch.tv/group/user/' + channel.replace('#', '') + '/chatters',
-                        json: true,
-                        timeout: 14000,
-                        headers: {
-                            'Client-ID': config.apiClientId
-                        }
-                    }, function (err, res, data) {
-                        if (err) {
-                            console.log(err);
-                            return;
-                        }
-                        // Check the channel wasn't parted during the request, which can take a long time
-                        if (!(channel in socket.channels)) {
-                            return;
-                        }
-                        var userList = socket.channels[channel].users;
-
-                        if (data.chatters) {
-                            var currentUsers = Object.keys(userList);
-                            var newUsers = [];
-
-                            var chatterTypes = Object.keys(data.chatters);
-                            for (var i = 0; i < chatterTypes.length; i++) {
-                                newUsers = newUsers.concat(data.chatters[chatterTypes[i]]);
+                    if (config.viwerListUpdateEnabled)
+                    {
+                        request.get({
+                            url: 'https://tmi.twitch.tv/group/user/' + channel.replace('#', '') + '/chatters',
+                            json: true,
+                            timeout: 14000,
+                            headers: {
+                                'Client-ID': config.apiClientId
                             }
-
-                            var joins = [];
-                            var parts = [];
-                            var modes = [];
-
-                            currentUsers.forEach(function (user) {
-                                if (newUsers.indexOf(user) === -1 && socket.nick !== user) {
-                                    delete userList[user];
-                                    parts.push(user);
+                        }, function (err, res, data)
+                        {
+                            if (err)
+                            {
+                                console.log(err);
+                                return;
+                            }
+                            // Check the channel wasn't parted during the request, which can take a long time
+                            if (!(channel in socket.channels))
+                            {
+                                return;
+                            }
+                            var userList = socket.channels[channel].users;
+                            
+                            if (data.chatters)
+                            {
+                                var currentUsers = Object.keys(userList);
+                                var newUsers = [];
+                                
+                                var chatterTypes = Object.keys(data.chatters);
+                                for (var i = 0; i < chatterTypes.length; i++)
+                                {
+                                    newUsers = newUsers.concat(data.chatters[chatterTypes[i]]);
                                 }
-                            });
-
-                            for (var i = 0; i < chatterTypes.length; i++) {
-                                data.chatters[chatterTypes[i]].forEach(function (user) {
-                                    if (!userList[user]) {
-                                        userList[user] = {
-                                            owner: false,
-                                            moderator: false,
-                                            turbo: false,
-                                            subscriber: false,
-                                            admin: false,
-                                            staff: false
-                                        }
-                                        joins.push(user);
-                                    }
-
-                                    if (channel.replace('#', '') === user && !userList[user].owner) {
-                                        userList[user].owner = true;
-                                        modes.push('+' + config.broadcasterMode + 'o ' + user + (config.broadcasterMode.length == 0 ? '' : ' ' + user));
-                                    }
-                                    if (chatterTypes[i] === 'staff' && !userList[user].staff) {
-                                        userList[user].staff = true;
-                                        modes.push('+' + config.staffMode + 'o ' + user + (config.staffMode.length == 0 ? '' : ' ' + user));
-                                    }
-                                    else if ((chatterTypes[i] === 'admins' || chatterTypes[i] === 'global_mods') && !userList[user].admin) {
-                                        userList[user].admin = true;
-                                        modes.push('+ao ' + user + ' ' + user);
-                                    }
-                                    else if (chatterTypes[i] === 'moderators' && !userList[user].moderator && !userList[user].owner) {
-                                        userList[user].moderator = true;
-                                        modes.push('+o ' + user);
-                                    }
-                                    else if (chatterTypes[i] === 'viewers' && userList[user].moderator && data.chatters['moderators'].length > 0) {
-                                        userList[user].moderator = false;
-                                        modes.push('-o ' + user);
+                                
+                                var joins = [];
+                                var parts = [];
+                                var modes = [];
+                                
+                                currentUsers.forEach(function (user)
+                                {
+                                    if (newUsers.indexOf(user) === -1 && socket.nick !== user)
+                                    {
+                                        delete userList[user];
+                                        parts.push(user);
                                     }
                                 });
-                            }
-
-                            if (joins.length < 100) {
-                                while (joins.length) {
-                                    var user = joins.splice(0, 1).toString();
-                                    socket.write(':' + user + '!' + user + '@' + user + '.tmi.twitch.tv JOIN ' + channel + '\r\n');
+                                
+                                for (var i = 0; i < chatterTypes.length; i++)
+                                {
+                                    data.chatters[chatterTypes[i]].forEach(function (user)
+                                    {
+                                        if (!userList[user])
+                                        {
+                                            userList[user] = {
+                                                owner: false,
+                                                moderator: false,
+                                                turbo: false,
+                                                subscriber: false,
+                                                admin: false,
+                                                staff: false
+                                            }
+                                            joins.push(user);
+                                        }
+                                        
+                                        if (channel.replace('#', '') === user && !userList[user].owner)
+                                        {
+                                            userList[user].owner = true;
+                                            modes.push('+' + config.broadcasterMode + 'o ' + user + (config.broadcasterMode.length == 0 ? '' : ' ' + user));
+                                        }
+                                        if (chatterTypes[i] === 'staff' && !userList[user].staff)
+                                        {
+                                            userList[user].staff = true;
+                                            modes.push('+' + config.staffMode + 'o ' + user + (config.staffMode.length == 0 ? '' : ' ' + user));
+                                        }
+                                        else if ((chatterTypes[i] === 'admins' || chatterTypes[i] === 'global_mods') && !userList[user].admin)
+                                        {
+                                            userList[user].admin = true;
+                                            modes.push('+ao ' + user + ' ' + user);
+                                        }
+                                        else if (chatterTypes[i] === 'moderators' && !userList[user].moderator && !userList[user].owner)
+                                        {
+                                            userList[user].moderator = true;
+                                            modes.push('+o ' + user);
+                                        }
+                                        else if (chatterTypes[i] === 'viewers' && userList[user].moderator && data.chatters['moderators'].length > 0)
+                                        {
+                                            userList[user].moderator = false;
+                                            modes.push('-o ' + user);
+                                        }
+                                    });
                                 }
-                                while (parts.length) {
-                                    var user = parts.splice(0, 1).toString();
-                                    socket.write(':' + user + '!' + user + '@' + user + '.tmi.twitch.tv PART ' + channel + '\r\n');
-                                }
-                            } else {
-                                while (newUsers.length) {
-                                    var users = newUsers.splice(0, 15);
-                                    // Include modes
-                                    for (var i = 0; i < users.length; i++) {
-                                        var modeChars = "";
-                                        var letterToChar = {
-                                            q: '~',
-                                            a: '&',
-                                            o: '@',
-                                            h: '%',
-                                            v: '+'
-                                        }
-                                        if (userList[users[i]].owner) {
-                                            modeChars += (config.broadcasterMode in letterToChar ? letterToChar[config.broadcasterMode] : '');
-                                            modeChars += '@';
-                                        }
-                                        if (userList[users[i]].staff) {
-                                            modeChars += (config.staffMode in letterToChar ? letterToChar[config.staffMode] : '');
-                                            if (modeChars.indexOf('@') === -1) modeChars += '@';
-                                        }
-                                        else if (userList[users[i]].admin) {
-                                            modeChars += '&';
-                                            if (modeChars.indexOf('@') === -1) modeChars += '@';
-                                        }
-                                        else if (userList[users[i]].moderator && modeChars.indexOf('@') === -1) modeChars += '@';
-
-                                        if (userList[users[i]].subscriber) modeChars += '%';
-                                        if (userList[users[i]].turbo) modeChars += '+';
-
-                                        users[i] = modeChars + users[i];
+                                
+                                if (joins.length < 100)
+                                {
+                                    while (joins.length)
+                                    {
+                                        var user = joins.splice(0, 1).toString();
+                                        socket.write(':' + user + '!' + user + '@' + user + '.tmi.twitch.tv JOIN ' + channel + '\r\n');
                                     }
-                                    users = users.join(' ');
-                                    socket.write(':tmi.twitch.tv 353 ' + socket.nick + ' = ' + channel + ' :' + users + '\r\n');
+                                    while (parts.length)
+                                    {
+                                        var user = parts.splice(0, 1).toString();
+                                        socket.write(':' + user + '!' + user + '@' + user + '.tmi.twitch.tv PART ' + channel + '\r\n');
+                                    }
+                                } else
+                                {
+                                    while (newUsers.length)
+                                    {
+                                        var users = newUsers.splice(0, 15);
+                                        // Include modes
+                                        for (var i = 0; i < users.length; i++)
+                                        {
+                                            var modeChars = "";
+                                            var letterToChar = {
+                                                q: '~',
+                                                a: '&',
+                                                o: '@',
+                                                h: '%',
+                                                v: '+'
+                                            }
+                                            if (userList[users[i]].owner)
+                                            {
+                                                modeChars += (config.broadcasterMode in letterToChar ? letterToChar[config.broadcasterMode] : '');
+                                                modeChars += '@';
+                                            }
+                                            if (userList[users[i]].staff)
+                                            {
+                                                modeChars += (config.staffMode in letterToChar ? letterToChar[config.staffMode] : '');
+                                                if (modeChars.indexOf('@') === -1) modeChars += '@';
+                                            }
+                                            else if (userList[users[i]].admin)
+                                            {
+                                                modeChars += '&';
+                                                if (modeChars.indexOf('@') === -1) modeChars += '@';
+                                            }
+                                            else if (userList[users[i]].moderator && modeChars.indexOf('@') === -1) modeChars += '@';
+                                            
+                                            if (userList[users[i]].subscriber) modeChars += '%';
+                                            if (userList[users[i]].turbo) modeChars += '+';
+                                            
+                                            users[i] = modeChars + users[i];
+                                        }
+                                        users = users.join(' ');
+                                        socket.write(':tmi.twitch.tv 353 ' + socket.nick + ' = ' + channel + ' :' + users + '\r\n');
+                                    }
+                                    socket.write(':tmi.twitch.tv 366 ' + socket.nick + ' ' + channel + ' :End of /NAMES list\r\n');
                                 }
-                                socket.write(':tmi.twitch.tv 366 ' + socket.nick + ' ' + channel + ' :End of /NAMES list\r\n');
+                                
+                                while (modes.length)
+                                {
+                                    var mode = modes.splice(0, 1).toString();
+                                    socket.write(':Twitch MODE ' + channel + ' ' + mode + '\r\n');
+                                }
                             }
-
-                            while (modes.length) {
-                                var mode = modes.splice(0, 1).toString();
-                                socket.write(':Twitch MODE ' + channel + ' ' + mode + '\r\n');
-                            }
-                        }
-                    })
+                        });
+                    }
                 }
             }
             socket.channels[channel].update();
