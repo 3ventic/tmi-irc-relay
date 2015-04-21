@@ -37,6 +37,10 @@ var server = net.createServer(function (socket) {
     socket.irc.on('error', function (e) {
         console.log(e);
     });
+    socket.irc.on('close', function ()
+    {
+        socket.end();
+    });
 
     socket.outgoingMessageStream.on('data', function (data) {
         parseOutgoing(socket, data);
