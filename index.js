@@ -64,6 +64,8 @@ function parseIncoming(socket, data)
     {
         case "MODE":
             return;
+        case "GLOBALUSERSTATE":
+            return;
         case "HOSTTARGET":
             var channel = message.params[0];
             var params = message.params[1].split(' ');
@@ -206,7 +208,7 @@ function parseIncoming(socket, data)
                 if (config.sendChannelModeNotices) socket.write(':Twitch NOTICE ' + channel + ' :Slow mode deactivated\r\n');
             }
         }
-        else if (jtvData[0].match(/(?:Now|USERCOLOR|EMOTESET)/))
+        else if (jtvData[0].match(/(?:Now|USERCOLOR|EMOTESET|SPECIALUSER)/))
         {
             return;
         }
