@@ -62,13 +62,14 @@ function parseIncoming(socket, data)
     
     switch (message.command)
     {
-        case "JOIN":
         case "PART":
             if (message.prefix.split('!')[0] !== socket.nick)
             {
                 return;
             }
             break;
+        case "JOIN":
+        case "315": // WHO
         case "353": // NAMES
         case "366": // End of NAMES
         case "MODE":
@@ -90,6 +91,12 @@ function parseIncoming(socket, data)
             }
             return;
         case "USERSTATE":
+            var channel = message.params[0];
+            if (!socket.channels[channel].joinSent)
+            {
+                socket.write(':' + socket.nick + '!' + socket.nick + '@' + socket.nick + '.tmi.twitch.tv JOIN ' + channel + '\r\n');
+                socket.channels[channel].joinSent = true;
+            }
             if (message.tags)
             {
                 var modes = "";
@@ -264,6 +271,7 @@ function parseOutgoing(socket, data)
         message.params[0].split(',').forEach(function (channel)
         {
             socket.channels[channel] = {
+                joinSent: false,
                 users: {},
                 topic: 'Welcome to the channel!',
                 timer: setInterval(function ()
