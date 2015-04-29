@@ -64,6 +64,11 @@ function parseIncoming(socket, data)
     {
         case "JOIN":
         case "PART":
+            if (message.prefix.split('!')[0] !== socket.nick)
+            {
+                return;
+            }
+            break;
         case "MODE":
         case "GLOBALUSERSTATE":
             return;
@@ -246,18 +251,16 @@ function parseOutgoing(socket, data)
     if (message.command === 'NICK')
     {
         socket.nick = message.params[0].trim();
-        socket.irc.write('CAP REQ :twitch.tv/tags\r\nCAP REQ :twitch.tv/commands\r\nTWITCHCLIENT 4' + '\r\n');
+        setTimeout(function ()
+        {
+            socket.irc.write('CAP REQ :twitch.tv/tags\r\nCAP REQ :twitch.tv/commands\r\nTWITCHCLIENT 4' + '\r\n');
+        }, 300);
     }
 
     else if (message.command === 'JOIN')
     {
         message.params[0].split(',').forEach(function (channel)
         {
-            if (!/^#[a-z_0-9]$/.test(channel))
-            {
-                return;
-            }
-            socket.write(':' + socket.nick + '!' + socket.nick + '@' + socket.nick + '.tmi.twitch.tv JOIN ' + channel);
             socket.channels[channel] = {
                 users: {},
                 topic: 'Welcome to the channel!',
@@ -463,7 +466,6 @@ function parseOutgoing(socket, data)
         {
             if (socket.channels[channel])
             {
-                socket.write(':' + socket.nick + '!' + socket.nick + '@' + socket.nick + '.tmi.twitch.tv PART ' + channel);
                 clearInterval(socket.channels[channel].timer);
                 delete socket.channels[channel];
             }
