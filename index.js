@@ -1,5 +1,3 @@
-// Keep as false unless you know what you're doing
-
 var config = require("./config");
 
 var net = require('net');
@@ -81,6 +79,7 @@ function parseIncoming(socket, data)
             socket.write(':Twitch NOTICE ' + channel + ' :Now hosting ' + params[0] + ' with ' + params[1] + ' viewers\r\n');
             return;
         case "CLEARCHAT":
+	    var channel = message.params[0];
             if (message.params.length > 1)
             {
                 socket.write(':Twitch NOTICE ' + channel + ' :' + message.params[1].split(' ')[0] + ' has been timed out or banned\r\n');
@@ -172,7 +171,7 @@ function parseIncoming(socket, data)
                         if (config.sendChannelModeNotices) socket.write(':Twitch NOTICE ' + channel + ' :Slow mode deactivated\r\n');
                     }
                 }
-                else if (jtvData[0].match(/(?:Now|USERCOLOR|EMOTESET|SPECIALUSER)/))
+                else if (jtvData[0].match(/(?:Now|USERCOLOR|EMOTESET|SPECIALUSER|CLEARCHAT)/))
                 {
                     return;
                 }
@@ -582,31 +581,15 @@ function sendInParts(socket, data)
     // Split messages into 512 chunks
     var message = Message(data);
     
-    // Reconstruct the message "header"
-    var tags = '';
-    if (message.tags.length > 0)
-    {
-        tags = '@';
-        for (var key in message.tags)
-        {
-            if (message.tags.hasOwnProperty(key))
-            {
-                tags += key;
-                if (message.tags[key] !== true) tags += "=" + message.tags[key];
-                tags += ';';
-            }
-        }
-        tags = tags.slice(0, -1) + " ";
-    }
-    
-    var messageStart = tags + ':' + message.prefix + ' ' + message.command + ' ' + message.params[0] + ' :';
+    var tags = data.split(' :')[0] + ' ';
+    var messageStart = ':' + message.prefix + ' ' + message.command + ' ' + message.params[0] + ' :';
     
     // Send the message in 510 chunks
-    var messageEnd = data.replace(messageStart, '');
+    var messageEnd = data.substring(tags.length + messageStart.length);
     var messageLength = (510 - messageStart.length);
     var messageCount = Math.ceil(messageEnd.length / messageLength);
     for (var i = 0; i < messageCount; i++)
     {
-        socket.write(messageStart + messageEnd.substr(i * messageLength, messageLength) + '\r\n');
+        socket.write(tags + messageStart + messageEnd.substr(i * messageLength, messageLength) + '\r\n');
     }
 }
