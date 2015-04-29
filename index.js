@@ -60,9 +60,62 @@ function parseIncoming(socket, data)
 {
     var message = Message(data);
     
-    if (message.command === 'MODE')
+    switch (message.command)
     {
-        return;
+        case "MODE":
+            return;
+        case "HOSTTARGET":
+            var channel = message.params[0];
+            var params = message.params[1].split(' ');
+            socket.write(':Twitch NOTICE ' + channel + ' :Now hosting ' + params[0] + ' with ' + params[1] + ' viewers\r\n');
+            return;
+        case "CLEARCHAT":
+            if (message.params.length > 1)
+            {
+                socket.write(':Twitch NOTICE ' + channel + ' :' + params[0] + ' has been timed out or banned\r\n');
+            }
+            else
+            {
+                socket.write(':Twitch NOTICE ' + channel + ' :Chat was cleared by a moderator!\r\n');
+            }
+            return;
+        case "USERSTATE":
+            if (message.tags)
+            {
+                var modes = "";
+                var names = [];
+                if (typeof message.tags["user-type"] === "string")
+                {
+                    switch (message.tags["user-type"])
+                    {
+                        case "staff":
+                            names.push(socket.nick);
+                            modes.push(config.staffMode);
+                            break;
+                        case "admin":
+                        case "global_mod":
+                            names.push(socket.nick);
+                            modes.push('a');
+                            break;
+                        default:
+                            break;
+                    }
+                    names.push(socket.nick);
+                    modes.push('o');
+                }
+                if (message.tags.subscriber === "1")
+                {
+                    names.push(socket.nick);
+                    modes.push('h');
+                }
+                if (message.tags.turbo === "1")
+                {
+                    names.push(socket.nick);
+                    modes.push('v');
+                }
+                socket.write(':Twitch MODE ' + message.params[0] + ' +' + modes + ' ' + names.join(' ') + '\r\n');
+            }
+            return;
     }
     
     if (message.prefix === 'jtv!jtv@jtv.tmi.twitch.tv' || message.prefix === 'jtv')
@@ -78,61 +131,7 @@ function parseIncoming(socket, data)
         
         var slowMode = /^This room is (now|no longer) in slow mode\./.test(message.params[1]);
         
-        if (jtvData[0] === 'HOSTTARGET')
-        {
-            if (jtvData[1] !== '-')
-            {
-                socket.write(':Twitch NOTICE ' + channel + ' :Now hosting ' + jtvData[1] + ' with ' + jtvData[2] + ' viewers\r\n');
-            }
-        }
-        else if (jtvData[0] === 'SPECIALUSER')
-        {
-            var user = jtvData[1];
-            
-            if (!userList[user])
-            {
-                userList[user] = {
-                    owner: false,
-                    moderator: false,
-                    turbo: false,
-                    subscriber: false,
-                    admin: false,
-                    staff: false
-                }
-                socket.write(':' + user + '!' + user + '@' + user + '.tmi.twitch.tv JOIN ' + channel + '\r\n');
-            }
-            
-            if (channel.replace('#', '') === user && !userList[user].owner)
-            {
-                userList[user].owner = true;
-                userList[user].moderator = true;
-                socket.write(':Twitch MODE ' + channel + ' +' + config.broadcasterMode + 'o ' + user + (config.broadcasterMode.length == 0 ? '' : ' ' + user) + '\r\n');
-            }
-            
-            if (jtvData[2] === 'staff' && !userList[user].staff)
-            {
-                userList[user].staff = true;
-                userList[user].moderator = true;
-                socket.write(':Twitch MODE ' + channel + ' +' + config.staffMode + 'o ' + user + (config.staffMode.length == 0 ? '' : ' ' + user) + '\r\n');
-            }
-            if ((jtvData[2] === 'admin' || jtvData[2] === 'global_mod') && !userList[user].admin)
-            {
-                userList[user].admin = true;
-                userList[user].moderator = true;
-                socket.write(':Twitch MODE ' + channel + ' +ao ' + user + ' ' + user + '\r\n');
-            }
-            if (jtvData[2] === 'subscriber' && !userList[user].subscriber)
-            {
-                userList[user].subscriber = true;
-                socket.write(':Twitch MODE ' + channel + ' +h ' + user + '\r\n');
-            }
-            if (jtvData[2] === 'turbo' && !userList[user].turbo)
-            {
-                userList[user].turbo = true;
-                socket.write(':Twitch MODE ' + channel + ' +v ' + user + '\r\n');
-            }
-        }
-        else if (subscribers)
+        if (subscribers)
         {
             if (message.params[1].indexOf('now') !== -1)
             {
@@ -157,17 +156,6 @@ function parseIncoming(socket, data)
                 if (config.sendChannelModeNotices) socket.write(':Twitch NOTICE ' + channel + ' :Slow mode deactivated\r\n');
             }
         }
-        else if (jtvData[0] === 'CLEARCHAT')
-        {
-            if (typeof jtvData[1] == "undefined")
-            {
-                socket.write(':Twitch NOTICE ' + channel + ' :Chat was cleared by a moderator (prevented by IRC)\r\n');
-            }
-            else
-            {
-                socket.write(':Twitch NOTICE ' + channel + ' :' + jtvData[1] + ' has been timed out or banned\r\n');
-            }
-        }
         else if (jtvData[0].match(/(?:Now|USERCOLOR|EMOTESET)/))
         {
             return;
@@ -185,6 +173,59 @@ function parseIncoming(socket, data)
         }
         return;
     }
+    else if (message.prefix === 'twitchnotify!twitchnotify@twitchnotify.tmi.twitch.tv' || message.prefix === 'twitchnotify')
+    {
+        socket.write(':twitchnotify!twitchnotify@twitchnotify.tmi.twitch.tv NOTICE ' + message.params[0] + ' :' + message.params[1] + '\r\n');
+        return;
+    }
+    
+    if (message.tags)
+    {
+        var user = message.prefix.split('!')[0];
+        
+        if (!userList[user])
+        {
+            userList[user] = {
+                owner: false,
+                moderator: false,
+                turbo: false,
+                subscriber: false,
+                admin: false,
+                staff: false
+            }
+            socket.write(':' + user + '!' + user + '@' + user + '.tmi.twitch.tv JOIN ' + channel + '\r\n');
+        }
+        
+        if (channel.replace('#', '') === user && !userList[user].owner)
+        {
+            userList[user].owner = true;
+            userList[user].moderator = true;
+            socket.write(':Twitch MODE ' + channel + ' +' + config.broadcasterMode + 'o ' + user + (config.broadcasterMode.length == 0 ? '' : ' ' + user) + '\r\n');
+        }
+        
+        if (message.tags["user-type"] === 'staff' && !userList[user].staff)
+        {
+            userList[user].staff = true;
+            userList[user].moderator = true;
+            socket.write(':Twitch MODE ' + channel + ' +' + config.staffMode + 'o ' + user + (config.staffMode.length == 0 ? '' : ' ' + user) + '\r\n');
+        }
+        if ((message.tags["user-type"] === 'admin' || message.tags["user-type"] === 'global_mod') && !userList[user].admin)
+        {
+            userList[user].admin = true;
+            userList[user].moderator = true;
+            socket.write(':Twitch MODE ' + channel + ' +ao ' + user + ' ' + user + '\r\n');
+        }
+        if (message.tags.subscriber === '1' && !userList[user].subscriber)
+        {
+            userList[user].subscriber = true;
+            socket.write(':Twitch MODE ' + channel + ' +h ' + user + '\r\n');
+        }
+        if (message.tags.turbo === '1' && !userList[user].turbo)
+        {
+            userList[user].turbo = true;
+            socket.write(':Twitch MODE ' + channel + ' +v ' + user + '\r\n');
+        }
+    }
     
     sendInParts(socket, data);
     
@@ -201,7 +242,7 @@ function parseOutgoing(socket, data)
     if (message.command === 'NICK')
     {
         socket.nick = message.params[0].trim();
-        socket.irc.write('TWITCHCLIENT 3' + '\r\n');
+        socket.irc.write('CAP REQ :twitch.tv/tags\r\nCAP REQ :twitch.tv/commands\r\nTWITCHCLIENT 4' + '\r\n');
     }
 
     else if (message.command === 'JOIN')
