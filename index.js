@@ -427,6 +427,10 @@ function parseOutgoing(socket, data)
                                         // Include modes
                                         for (var i = 0; i < users.length; i++)
                                         {
+                                            if (users[i] == socket.nick)
+                                            {
+                                                continue;
+                                            }
                                             var modeChars = "";
                                             var letterToChar = {
                                                 q: '~',
