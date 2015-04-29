@@ -90,28 +90,28 @@ function parseIncoming(socket, data)
                     {
                         case "staff":
                             names.push(socket.nick);
-                            modes.push(config.staffMode);
+                            modes += config.staffMode;
                             break;
                         case "admin":
                         case "global_mod":
                             names.push(socket.nick);
-                            modes.push('a');
+                            modes += 'a';
                             break;
                         default:
                             break;
                     }
                     names.push(socket.nick);
-                    modes.push('o');
+                    modes += 'o';
                 }
                 if (message.tags.subscriber === "1")
                 {
                     names.push(socket.nick);
-                    modes.push('h');
+                    modes += 'h';
                 }
                 if (message.tags.turbo === "1")
                 {
                     names.push(socket.nick);
-                    modes.push('v');
+                    modes += 'v';
                 }
                 socket.write(':Twitch MODE ' + message.params[0] + ' +' + modes + ' ' + names.join(' ') + '\r\n');
             }
