@@ -62,8 +62,14 @@ function parseIncoming(socket, data)
     
     switch (message.command)
     {
+        case "JOIN":
+        case "PART":
+            if (message.prefix.split('!')[0] !== socket.nick)
+            {
+                return;
+            }
+            break;
         case "MODE":
-            return;
         case "GLOBALUSERSTATE":
             return;
         case "HOSTTARGET":
@@ -240,13 +246,15 @@ function parseIncoming(socket, data)
 
 function parseOutgoing(socket, data)
 {
-    
     var message = Message(data);
     
     if (message.command === 'NICK')
     {
         socket.nick = message.params[0].trim();
-        socket.irc.write('CAP REQ :twitch.tv/tags\r\nCAP REQ :twitch.tv/commands\r\nTWITCHCLIENT 4' + '\r\n');
+        setTimeout(function ()
+        {
+            socket.irc.write('CAP REQ :twitch.tv/tags\r\nCAP REQ :twitch.tv/commands\r\nTWITCHCLIENT 4' + '\r\n');
+        }, 300);
     }
 
     else if (message.command === 'JOIN')
