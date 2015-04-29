@@ -69,6 +69,8 @@ function parseIncoming(socket, data)
                 return;
             }
             break;
+        case "353": // NAMES
+        case "366": // End of NAMES
         case "MODE":
         case "GLOBALUSERSTATE":
             return;
