@@ -179,6 +179,7 @@ function parseIncoming(socket, data)
     
     if (message.tags)
     {
+        var channel = message.params[0];
         var userList = socket.channels[channel].users;
         
         var user = message.prefix.split('!')[0];
