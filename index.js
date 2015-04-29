@@ -125,8 +125,6 @@ function parseIncoming(socket, data)
         
         if (channel === socket.nick || !socket.channels[channel]) return;
         
-        var userList = socket.channels[channel].users;
-        
         var subscribers = /^This room is (now|no longer) in subscribers-only mode\.$/.test(message.params[1]);
         
         var slowMode = /^This room is (now|no longer) in slow mode\./.test(message.params[1]);
@@ -181,6 +179,8 @@ function parseIncoming(socket, data)
     
     if (message.tags)
     {
+        var userList = socket.channels[channel].users;
+        
         var user = message.prefix.split('!')[0];
         
         if (!userList[user])
