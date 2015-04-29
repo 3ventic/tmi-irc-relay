@@ -83,7 +83,7 @@ function parseIncoming(socket, data)
         case "CLEARCHAT":
             if (message.params.length > 1)
             {
-                socket.write(':Twitch NOTICE ' + channel + ' :' + params[0] + ' has been timed out or banned\r\n');
+                socket.write(':Twitch NOTICE ' + channel + ' :' + message.params[1].split(' ')[0] + ' has been timed out or banned\r\n');
             }
             else
             {
