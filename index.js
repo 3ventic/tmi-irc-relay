@@ -119,6 +119,65 @@ function parseIncoming(socket, data)
             }
             return;
         case "PRIVMSG":
+            if (message.prefix === 'jtv!jtv@jtv.tmi.twitch.tv' || message.prefix === 'jtv')
+            {
+                var channel = message.params[0];
+                var jtvData = message.params[1].split(' ');
+                
+                if (channel === socket.nick || !socket.channels[channel]) return;
+                
+                var subscribers = /^This room is (now|no longer) in subscribers-only mode\.$/.test(message.params[1]);
+                
+                var slowMode = /^This room is (now|no longer) in slow mode\./.test(message.params[1]);
+                
+                if (subscribers)
+                {
+                    if (message.params[1].indexOf('now') !== -1)
+                    {
+                        socket.write(':Twitch MODE ' + channel + ' +m\r\n');
+                        if (config.sendChannelModeNotices) socket.write(':Twitch NOTICE ' + channel + ' :This channel is now in subscribers-only mode.\r\n');
+                    } else
+                    {
+                        socket.write(':Twitch MODE ' + channel + ' -m\r\n');
+                        if (config.sendChannelModeNotices) socket.write(':Twitch NOTICE ' + channel + ' :This channel is no longer in subscribers-only mode.\r\n');
+                    }
+                }
+                else if (slowMode)
+                {
+                    if (message.params[1].indexOf('now') !== -1)
+                    {
+                        var slowTime = /You may send messages every ([0-9]+) seconds/.exec(message.params[1]);
+                        socket.write(':Twitch MODE ' + channel + ' +f ' + slowTime[1].trim() + 's\r\n');
+                        if (config.sendChannelModeNotices) socket.write(':Twitch NOTICE ' + channel + ' :Slow mode activated at ' + slowTime[1].trim() + ' seconds\r\n');
+                    } else
+                    {
+                        socket.write(':Twitch MODE ' + channel + ' -f\r\n');
+                        if (config.sendChannelModeNotices) socket.write(':Twitch NOTICE ' + channel + ' :Slow mode deactivated\r\n');
+                    }
+                }
+                else if (jtvData[0].match(/(?:Now|USERCOLOR|EMOTESET|SPECIALUSER)/))
+                {
+                    return;
+                }
+                else
+                {
+                    var params = '';
+                    var length = message.params.length;
+                    for (var i = 1; i < length; i++)
+                    {
+                        params += ' ' + message.params[i];
+                    }
+                    params = params.trim();
+                    sendInParts(socket, ':Twitch NOTICE ' + channel + ' :' + params + '\r\n');
+                }
+                return;
+            }
+            else if (message.prefix === 'twitchnotify!twitchnotify@twitchnotify.tmi.twitch.tv' || message.prefix === 'twitchnotify')
+            {
+                socket.write(':twitchnotify!twitchnotify@twitchnotify.tmi.twitch.tv NOTICE ' + message.params[0] + ' :' + message.params[1] + '\r\n');
+                return;
+            }
+            
             if (message.tags)
             {
                 var channel = message.params[0];
@@ -170,65 +229,6 @@ function parseIncoming(socket, data)
                 }
             }
             break;
-    }
-    
-    if (message.prefix === 'jtv!jtv@jtv.tmi.twitch.tv' || message.prefix === 'jtv')
-    {
-        var channel = message.params[0];
-        var jtvData = message.params[1].split(' ');
-        
-        if (channel === socket.nick || !socket.channels[channel]) return;
-        
-        var subscribers = /^This room is (now|no longer) in subscribers-only mode\.$/.test(message.params[1]);
-        
-        var slowMode = /^This room is (now|no longer) in slow mode\./.test(message.params[1]);
-        
-        if (subscribers)
-        {
-            if (message.params[1].indexOf('now') !== -1)
-            {
-                socket.write(':Twitch MODE ' + channel + ' +m\r\n');
-                if (config.sendChannelModeNotices) socket.write(':Twitch NOTICE ' + channel + ' :This channel is now in subscribers-only mode.\r\n');
-            } else
-            {
-                socket.write(':Twitch MODE ' + channel + ' -m\r\n');
-                if (config.sendChannelModeNotices) socket.write(':Twitch NOTICE ' + channel + ' :This channel is no longer in subscribers-only mode.\r\n');
-            }
-        }
-        else if (slowMode)
-        {
-            if (message.params[1].indexOf('now') !== -1)
-            {
-                var slowTime = /You may send messages every ([0-9]+) seconds/.exec(message.params[1]);
-                socket.write(':Twitch MODE ' + channel + ' +f ' + slowTime[1].trim() + 's\r\n');
-                if (config.sendChannelModeNotices) socket.write(':Twitch NOTICE ' + channel + ' :Slow mode activated at ' + slowTime[1].trim() + ' seconds\r\n');
-            } else
-            {
-                socket.write(':Twitch MODE ' + channel + ' -f\r\n');
-                if (config.sendChannelModeNotices) socket.write(':Twitch NOTICE ' + channel + ' :Slow mode deactivated\r\n');
-            }
-        }
-        else if (jtvData[0].match(/(?:Now|USERCOLOR|EMOTESET|SPECIALUSER)/))
-        {
-            return;
-        }
-        else
-        {
-            var params = '';
-            var length = message.params.length;
-            for (var i = 1; i < length; i++)
-            {
-                params += ' ' + message.params[i];
-            }
-            params = params.trim();
-            sendInParts(socket, ':Twitch NOTICE ' + channel + ' :' + params + '\r\n');
-        }
-        return;
-    }
-    else if (message.prefix === 'twitchnotify!twitchnotify@twitchnotify.tmi.twitch.tv' || message.prefix === 'twitchnotify')
-    {
-        socket.write(':twitchnotify!twitchnotify@twitchnotify.tmi.twitch.tv NOTICE ' + message.params[0] + ' :' + message.params[1] + '\r\n');
-        return;
     }
     
     sendInParts(socket, data);
