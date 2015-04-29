@@ -116,6 +116,58 @@ function parseIncoming(socket, data)
                 socket.write(':Twitch MODE ' + message.params[0] + ' +' + modes + ' ' + names.join(' ') + '\r\n');
             }
             return;
+        case "PRIVMSG":
+            if (message.tags)
+            {
+                var channel = message.params[0];
+                var userList = socket.channels[channel].users;
+                
+                var user = message.prefix.split('!')[0];
+                
+                if (!userList[user])
+                {
+                    userList[user] = {
+                        owner: false,
+                        moderator: false,
+                        turbo: false,
+                        subscriber: false,
+                        admin: false,
+                        staff: false
+                    }
+                    socket.write(':' + user + '!' + user + '@' + user + '.tmi.twitch.tv JOIN ' + channel + '\r\n');
+                }
+                
+                if (channel.replace('#', '') === user && !userList[user].owner)
+                {
+                    userList[user].owner = true;
+                    userList[user].moderator = true;
+                    socket.write(':Twitch MODE ' + channel + ' +' + config.broadcasterMode + 'o ' + user + (config.broadcasterMode.length == 0 ? '' : ' ' + user) + '\r\n');
+                }
+                
+                if (message.tags["user-type"] === 'staff' && !userList[user].staff)
+                {
+                    userList[user].staff = true;
+                    userList[user].moderator = true;
+                    socket.write(':Twitch MODE ' + channel + ' +' + config.staffMode + 'o ' + user + (config.staffMode.length == 0 ? '' : ' ' + user) + '\r\n');
+                }
+                if ((message.tags["user-type"] === 'admin' || message.tags["user-type"] === 'global_mod') && !userList[user].admin)
+                {
+                    userList[user].admin = true;
+                    userList[user].moderator = true;
+                    socket.write(':Twitch MODE ' + channel + ' +ao ' + user + ' ' + user + '\r\n');
+                }
+                if (message.tags.subscriber === '1' && !userList[user].subscriber)
+                {
+                    userList[user].subscriber = true;
+                    socket.write(':Twitch MODE ' + channel + ' +h ' + user + '\r\n');
+                }
+                if (message.tags.turbo === '1' && !userList[user].turbo)
+                {
+                    userList[user].turbo = true;
+                    socket.write(':Twitch MODE ' + channel + ' +v ' + user + '\r\n');
+                }
+            }
+            break;
     }
     
     if (message.prefix === 'jtv!jtv@jtv.tmi.twitch.tv' || message.prefix === 'jtv')
@@ -175,57 +227,6 @@ function parseIncoming(socket, data)
     {
         socket.write(':twitchnotify!twitchnotify@twitchnotify.tmi.twitch.tv NOTICE ' + message.params[0] + ' :' + message.params[1] + '\r\n');
         return;
-    }
-    
-    if (message.tags)
-    {
-        var channel = message.params[0];
-        var userList = socket.channels[channel].users;
-        
-        var user = message.prefix.split('!')[0];
-        
-        if (!userList[user])
-        {
-            userList[user] = {
-                owner: false,
-                moderator: false,
-                turbo: false,
-                subscriber: false,
-                admin: false,
-                staff: false
-            }
-            socket.write(':' + user + '!' + user + '@' + user + '.tmi.twitch.tv JOIN ' + channel + '\r\n');
-        }
-        
-        if (channel.replace('#', '') === user && !userList[user].owner)
-        {
-            userList[user].owner = true;
-            userList[user].moderator = true;
-            socket.write(':Twitch MODE ' + channel + ' +' + config.broadcasterMode + 'o ' + user + (config.broadcasterMode.length == 0 ? '' : ' ' + user) + '\r\n');
-        }
-        
-        if (message.tags["user-type"] === 'staff' && !userList[user].staff)
-        {
-            userList[user].staff = true;
-            userList[user].moderator = true;
-            socket.write(':Twitch MODE ' + channel + ' +' + config.staffMode + 'o ' + user + (config.staffMode.length == 0 ? '' : ' ' + user) + '\r\n');
-        }
-        if ((message.tags["user-type"] === 'admin' || message.tags["user-type"] === 'global_mod') && !userList[user].admin)
-        {
-            userList[user].admin = true;
-            userList[user].moderator = true;
-            socket.write(':Twitch MODE ' + channel + ' +ao ' + user + ' ' + user + '\r\n');
-        }
-        if (message.tags.subscriber === '1' && !userList[user].subscriber)
-        {
-            userList[user].subscriber = true;
-            socket.write(':Twitch MODE ' + channel + ' +h ' + user + '\r\n');
-        }
-        if (message.tags.turbo === '1' && !userList[user].turbo)
-        {
-            userList[user].turbo = true;
-            socket.write(':Twitch MODE ' + channel + ' +v ' + user + '\r\n');
-        }
     }
     
     sendInParts(socket, data);
