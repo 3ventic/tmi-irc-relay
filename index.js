@@ -95,6 +95,8 @@ function parseIncoming(socket, data)
             if (!socket.channels[channel].joinSent)
             {
                 socket.write(':' + socket.nick + '!' + socket.nick + '@' + socket.nick + '.tmi.twitch.tv JOIN ' + channel + '\r\n');
+                socket.write(':' + socket.nick + '.tmi.twitch.tv 353 ' + socket.nick + ' = ' + channel + ' :' + socket.nick + '\r\n');
+                socket.write(':' + socket.nick + '.tmi.twitch.tv 366 ' + socket.nick + ' ' + channel + ' :End of /NAMES list\r\n');
                 socket.channels[channel].joinSent = true;
             }
             if (message.tags)
