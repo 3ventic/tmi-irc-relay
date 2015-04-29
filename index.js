@@ -351,6 +351,11 @@ function parseOutgoing(socket, data)
                                 {
                                     data.chatters[chatterTypes[i]].forEach(function (user)
                                     {
+                                        if (user === socket.nick)
+                                        {
+                                            // don't handle yourself, causes duplicate JOINs and we already have our own MODEs from USERSTATE
+                                            return;
+                                        }
                                         if (!userList[user])
                                         {
                                             userList[user] = {
