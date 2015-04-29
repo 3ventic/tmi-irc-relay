@@ -62,8 +62,9 @@ function parseIncoming(socket, data)
     
     switch (message.command)
     {
+        case "JOIN":
+        case "PART":
         case "MODE":
-            return;
         case "GLOBALUSERSTATE":
             return;
         case "HOSTTARGET":
