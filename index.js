@@ -97,6 +97,14 @@ function parseIncoming(socket, data)
                 socket.write(':' + socket.nick + '.tmi.twitch.tv 353 ' + socket.nick + ' = ' + channel + ' :' + socket.nick + '\r\n');
                 socket.write(':' + socket.nick + '.tmi.twitch.tv 366 ' + socket.nick + ' ' + channel + ' :End of /NAMES list\r\n');
                 socket.channels[channel].joinSent = true;
+                socket.channels[channel].users[socket.nick] = {
+        			owner: false,
+        			moderator: false,
+        			turbo: false,
+        			subscriber: false,
+        			admin: false,
+        			staff: false
+        		};
             }
             if (message.tags)
             {
@@ -107,8 +115,10 @@ function parseIncoming(socket, data)
                     switch (message.tags["user-type"])
                     {
                         case "staff":
-                            names.push(socket.nick);
-                            modes += config.staffMode;
+                            if (config.staffMode.length === 1) {
+                                names.push(socket.nick);
+                                modes += config.staffMode;
+                            }
                             break;
                         case "admin":
                         case "global_mod":
@@ -120,6 +130,12 @@ function parseIncoming(socket, data)
                     }
                     names.push(socket.nick);
                     modes += 'o';
+                }
+                if (message.params[0] === "#" + socket.nick && modes.indexOf('o') === -1) {
+                    names.push(socket.nick);
+                    if (config.broadcasterMode.length === 1)
+                        names.push(socket.nick);
+                    modes += config.broadcasterMode + 'o';
                 }
                 if (message.tags.subscriber === "1")
                 {
