@@ -131,7 +131,8 @@ function parseIncoming(socket, data)
                     names.push(socket.nick);
                     modes += 'o';
                 }
-                if (message.params[0] === "#" + socket.nick && modes.indexOf('o') === -1) {
+                if (message.params[0] === "#" + socket.nick && modes.indexOf('o') === -1)
+                {
                     names.push(socket.nick);
                     if (config.broadcasterMode.length === 1)
                         names.push(socket.nick);
@@ -248,6 +249,11 @@ function parseIncoming(socket, data)
                     userList[user].admin = true;
                     userList[user].moderator = true;
                     socket.write(':Twitch MODE ' + channel + ' +ao ' + user + ' ' + user + '\r\n');
+                }
+                if (message.tags["user-type"] === 'mod' && !userList[user].moderator)
+                {
+                    userList[user].moderator = true;
+                    socket.write(':Twitch MODE ' + channel + ' +o ' + user + '\r\n');
                 }
                 if (message.tags.subscriber === '1' && !userList[user].subscriber)
                 {
