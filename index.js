@@ -91,9 +91,9 @@ function parseIncoming(socket, data)
             return;
         case "USERSTATE":
             var channel = message.params[0];
+            if (!socket.channels[channel]) return; // unjoined channel, don't care
             if (!socket.channels[channel].joinSent)
             {
-                socket.write(':' + socket.nick + '!' + socket.nick + '@' + socket.nick + '.tmi.twitch.tv JOIN ' + channel + '\r\n');
                 socket.write(':' + socket.nick + '.tmi.twitch.tv 353 ' + socket.nick + ' = ' + channel + ' :' + socket.nick + '\r\n');
                 socket.write(':' + socket.nick + '.tmi.twitch.tv 366 ' + socket.nick + ' ' + channel + ' :End of /NAMES list\r\n');
                 socket.channels[channel].joinSent = true;
@@ -131,7 +131,8 @@ function parseIncoming(socket, data)
                     names.push(socket.nick);
                     modes += 'o';
                 }
-                if (message.params[0] === "#" + socket.nick && modes.indexOf('o') === -1) {
+                if (message.params[0] === "#" + socket.nick && modes.indexOf('o') === -1)
+                {
                     names.push(socket.nick);
                     if (config.broadcasterMode.length === 1)
                         names.push(socket.nick);
@@ -249,6 +250,11 @@ function parseIncoming(socket, data)
                     userList[user].moderator = true;
                     socket.write(':Twitch MODE ' + channel + ' +ao ' + user + ' ' + user + '\r\n');
                 }
+                if (message.tags["user-type"] === 'mod' && !userList[user].moderator)
+                {
+                    userList[user].moderator = true;
+                    socket.write(':Twitch MODE ' + channel + ' +o ' + user + '\r\n');
+                }
                 if (message.tags.subscriber === '1' && !userList[user].subscriber)
                 {
                     userList[user].subscriber = true;
@@ -287,6 +293,7 @@ function parseOutgoing(socket, data)
     {
         message.params[0].split(',').forEach(function (channel)
         {
+            socket.write(':' + socket.nick + '!' + socket.nick + '@' + socket.nick + '.tmi.twitch.tv JOIN ' + channel + '\r\n');
             socket.channels[channel] = {
                 joinSent: false,
                 users: {},
