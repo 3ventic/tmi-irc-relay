@@ -91,6 +91,7 @@ function parseIncoming(socket, data)
             return;
         case "USERSTATE":
             var channel = message.params[0];
+            if (!socket.channels[channel]) return; // unjoined channel, don't care
             if (!socket.channels[channel].joinSent)
             {
                 socket.write(':' + socket.nick + '.tmi.twitch.tv 353 ' + socket.nick + ' = ' + channel + ' :' + socket.nick + '\r\n');
