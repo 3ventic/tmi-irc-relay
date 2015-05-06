@@ -613,7 +613,7 @@ function sendInParts(socket, data)
     // Split messages into 512 chunks
     var message = Message(data);
     
-    var tags = data.split(' :')[0] + ' ';
+    var tags = data[0] === '@' ? data.split(' :')[0] + ' ' : '';
     var messageStart = ':' + message.prefix + ' ' + message.command + ' ' + message.params[0] + ' :';
     
     // Send the message in 510 chunks
