@@ -595,6 +595,15 @@ console.log("Started");
 
 function sendInParts(socket, data)
 {
+    if (config.stripTags)
+    {
+        // Has tags
+        if (data[0] === '@')
+        {
+            data = data.substring(data.indexOf(' :') + 1); 
+        }
+    }
+
     // Message is already short enough
     if (data.length < 510)
     {
