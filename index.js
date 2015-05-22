@@ -188,7 +188,7 @@ function parseIncoming(socket, data)
                         if (config.sendChannelModeNotices) socket.write(':Twitch NOTICE ' + channel + ' :Slow mode deactivated\r\n');
                     }
                 }
-                else if (jtvData[0].match(/(?:Now|USERCOLOR|EMOTESET|SPECIALUSER|CLEARCHAT)/))
+                else if (jtvData[0].match(/(?:Now|USERCOLOR|EMOTESET|SPECIALUSER|CLEARCHAT|HISTORYEND)/))
                 {
                     return;
                 }
