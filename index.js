@@ -327,25 +327,40 @@ function parseOutgoing(socket, data)
                                         {
                                             for (var j = 0; j < userList[user].length; ++j)
                                             {
-                                                if (userList[user][j] !== 'h' && userList[user][j] !== 'v')
+                                                if (userList[user][j] === 'h')
                                                 {
-                                                    removeModes += userList[user][j];
+                                                    _modes += 'h';
+                                                    continue;
                                                 }
+                                                if (userList[user][j] === 'v')
+                                                {
+                                                    _modes += 'v';
+                                                    continue;
+                                                }
+                                                removeModes += userList[user][j];
                                             }
                                         }
 
                                         var names = [];
-                                        for (var j = 0; j < removeModes.length; ++j)
+                                        if (removeModes.length > 0)
                                         {
-                                            names.push(user);
+                                            for (var j = 0; j < removeModes.length; ++j)
+                                            {
+                                                names.push(user);
+                                            }
+                                            modes.push('-' + removeModes + ' ' + names.join(' '));
                                         }
-                                        modes.push('-' + removeModes + ' ' + names.join(' '));
-                                        names = [];
-                                        for (var j = 0; j < _modes.length; ++j)
+                                        if (userList[user] !== _modes)
                                         {
-                                            names.push(user);
+                                            names = [];
+                                            for (var j = 0; j < _modes.length; ++j)
+                                            {
+                                                names.push(user);
+                                            }
+                                            modes.push('+' + _modes + ' ' + names.join(' '));
                                         }
-                                        modes.push('+' + _modes + ' ' + names.join(' '));
+
+                                        userList[user] = _modes;
                                     });
                                 }
                                 
@@ -564,13 +579,13 @@ function parseAndSendUserModes(socket, message, user)
         names.push(user);
     }
     
-    userList[user] = modes;
-    
     if (removedModes.length > 0)
         socket.write(':Twitch MODE ' + channel + ' -' + removedModes + ' ' + removedNames.join(' ') + '\r\n');
     
-    if (modes.length > 0)
+    if (userList[user] !== modes)
         socket.write(':Twitch MODE ' + channel + ' +' + modes + ' ' + names.join(' ') + '\r\n');
+    
+    userList[user] = modes;
 }
 
 function sendInParts(socket, data)
