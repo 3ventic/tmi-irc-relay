@@ -97,58 +97,11 @@ function parseIncoming(socket, data)
                 socket.write(':' + socket.nick + '.tmi.twitch.tv 353 ' + socket.nick + ' = ' + channel + ' :' + socket.nick + '\r\n');
                 socket.write(':' + socket.nick + '.tmi.twitch.tv 366 ' + socket.nick + ' ' + channel + ' :End of /NAMES list\r\n');
                 socket.channels[channel].joinSent = true;
-                socket.channels[channel].users[socket.nick] = {
-        			owner: false,
-        			moderator: false,
-        			turbo: false,
-        			subscriber: false,
-        			admin: false,
-        			staff: false
-        		};
+                socket.channels[channel].users[socket.nick] = "";
             }
             if (message.tags)
             {
-                var modes = "";
-                var names = [];
-                if (typeof message.tags["user-type"] === "string")
-                {
-                    switch (message.tags["user-type"])
-                    {
-                        case "staff":
-                            if (config.staffMode.length === 1) {
-                                names.push(socket.nick);
-                                modes += config.staffMode;
-                            }
-                            break;
-                        case "admin":
-                        case "global_mod":
-                            names.push(socket.nick);
-                            modes += 'a';
-                            break;
-                        default:
-                            break;
-                    }
-                    names.push(socket.nick);
-                    modes += 'o';
-                }
-                if (message.params[0] === "#" + socket.nick && modes.indexOf('o') === -1)
-                {
-                    names.push(socket.nick);
-                    if (config.broadcasterMode.length === 1)
-                        names.push(socket.nick);
-                    modes += config.broadcasterMode + 'o';
-                }
-                if (message.tags.subscriber === "1")
-                {
-                    names.push(socket.nick);
-                    modes += 'h';
-                }
-                if (message.tags.turbo === "1")
-                {
-                    names.push(socket.nick);
-                    modes += 'v';
-                }
-                socket.write(':Twitch MODE ' + message.params[0] + ' +' + modes + ' ' + names.join(' ') + '\r\n');
+                parseAndSendUserModes(socket, message, socket.nick);
             }
             return;
         case "PRIVMSG":
@@ -213,58 +166,13 @@ function parseIncoming(socket, data)
             
             if (message.tags)
             {
-                var channel = message.params[0];
-                var userList = socket.channels[channel].users;
-                
                 var user = message.prefix.split('!')[0];
-                
-                if (!userList[user])
+                if (typeof socket.channels[channel].users[user] !== "string")
                 {
-                    userList[user] = {
-                        owner: false,
-                        moderator: false,
-                        turbo: false,
-                        subscriber: false,
-                        admin: false,
-                        staff: false
-                    }
+                    socket.channels[channel].users[user] = "";
                     socket.write(':' + user + '!' + user + '@' + user + '.tmi.twitch.tv JOIN ' + channel + '\r\n');
                 }
-                
-                if (channel.replace('#', '') === user && !userList[user].owner)
-                {
-                    userList[user].owner = true;
-                    userList[user].moderator = true;
-                    socket.write(':Twitch MODE ' + channel + ' +' + config.broadcasterMode + 'o ' + user + (config.broadcasterMode.length == 0 ? '' : ' ' + user) + '\r\n');
-                }
-                
-                if (message.tags["user-type"] === 'staff' && !userList[user].staff)
-                {
-                    userList[user].staff = true;
-                    userList[user].moderator = true;
-                    socket.write(':Twitch MODE ' + channel + ' +' + config.staffMode + 'o ' + user + (config.staffMode.length == 0 ? '' : ' ' + user) + '\r\n');
-                }
-                if ((message.tags["user-type"] === 'admin' || message.tags["user-type"] === 'global_mod') && !userList[user].admin)
-                {
-                    userList[user].admin = true;
-                    userList[user].moderator = true;
-                    socket.write(':Twitch MODE ' + channel + ' +ao ' + user + ' ' + user + '\r\n');
-                }
-                if (message.tags["user-type"] === 'mod' && !userList[user].moderator)
-                {
-                    userList[user].moderator = true;
-                    socket.write(':Twitch MODE ' + channel + ' +o ' + user + '\r\n');
-                }
-                if (message.tags.subscriber === '1' && !userList[user].subscriber)
-                {
-                    userList[user].subscriber = true;
-                    socket.write(':Twitch MODE ' + channel + ' +h ' + user + '\r\n');
-                }
-                if (message.tags.turbo === '1' && !userList[user].turbo)
-                {
-                    userList[user].turbo = true;
-                    socket.write(':Twitch MODE ' + channel + ' +v ' + user + '\r\n');
-                }
+                parseAndSendUserModes(socket, message, user);
             }
             break;
     }
@@ -297,6 +205,7 @@ function parseOutgoing(socket, data)
             socket.channels[channel] = {
                 joinSent: false,
                 users: {},
+                myModes: [],
                 topic: 'Welcome to the channel!',
                 timer: setInterval(function ()
                 {
@@ -388,44 +297,54 @@ function parseOutgoing(socket, data)
                                             // don't handle yourself, causes duplicate JOINs and we already have our own MODEs from USERSTATE
                                             return;
                                         }
-                                        if (!userList[user])
+                                        if (typeof userList[user] !== "string")
                                         {
-                                            userList[user] = {
-                                                owner: false,
-                                                moderator: false,
-                                                turbo: false,
-                                                subscriber: false,
-                                                admin: false,
-                                                staff: false
-                                            }
+                                            userList[user] = "";
                                             joins.push(user);
                                         }
                                         
-                                        if (channel.replace('#', '') === user && !userList[user].owner)
+                                        var _modes = "";
+                                        var removeModes = "";
+                                        
+                                        if (channel.replace('#', '') === user && userList[user].indexOf(config.broadcasterMode) === -1)
                                         {
-                                            userList[user].owner = true;
-                                            modes.push('+' + config.broadcasterMode + 'o ' + user + (config.broadcasterMode.length == 0 ? '' : ' ' + user));
+                                            _modes += config.broadcasterMode + 'o';
                                         }
-                                        if (chatterTypes[i] === 'staff' && !userList[user].staff)
+                                        if (chatterTypes[i] === 'staff' && userList[user].indexOf(config.staffMode) === -1)
                                         {
-                                            userList[user].staff = true;
-                                            modes.push('+' + config.staffMode + 'o ' + user + (config.staffMode.length == 0 ? '' : ' ' + user));
+                                            _modes += _modes.indexOf('o') === -1 ? config.staffMode + 'o' : config.staffMode;
                                         }
-                                        else if ((chatterTypes[i] === 'admins' || chatterTypes[i] === 'global_mods') && !userList[user].admin)
+                                        else if ((chatterTypes[i] === 'admins' || chatterTypes[i] === 'global_mods') && userList[user].indexOf('a') === -1)
                                         {
-                                            userList[user].admin = true;
-                                            modes.push('+ao ' + user + ' ' + user);
+                                            _modes += 'ao';
                                         }
-                                        else if (chatterTypes[i] === 'moderators' && !userList[user].moderator && !userList[user].owner)
+                                        else if (chatterTypes[i] === 'moderators' && userList[user].indexOf('o') === -1)
                                         {
-                                            userList[user].moderator = true;
-                                            modes.push('+o ' + user);
+                                            _modes += 'o';
                                         }
-                                        else if (chatterTypes[i] === 'viewers' && userList[user].moderator && data.chatters['moderators'].length > 0)
+                                        else if (chatterTypes[i] === 'viewers' && data.chatters['moderators'].length > 0)
                                         {
-                                            userList[user].moderator = false;
-                                            modes.push('-o ' + user);
+                                            for (var j = 0; j < userList[user].length; ++j)
+                                            {
+                                                if (userList[user][j] !== 'h' && userList[user][j] !== 'v')
+                                                {
+                                                    removeModes += userList[user][j];
+                                                }
+                                            }
                                         }
+
+                                        var names = [];
+                                        for (var j = 0; j < removeModes.length; ++j)
+                                        {
+                                            names.push(user);
+                                        }
+                                        modes.push('-' + removeModes + ' ' + names.join(' '));
+                                        names = [];
+                                        for (var j = 0; j < _modes.length; ++j)
+                                        {
+                                            names.push(user);
+                                        }
+                                        modes.push('+' + _modes + ' ' + names.join(' '));
                                     });
                                 }
                                 
@@ -441,7 +360,8 @@ function parseOutgoing(socket, data)
                                         var user = parts.splice(0, 1).toString();
                                         socket.write(':' + user + '!' + user + '@' + user + '.tmi.twitch.tv PART ' + channel + '\r\n');
                                     }
-                                } else
+                                }
+                                else
                                 {
                                     while (newUsers.length)
                                     {
@@ -461,25 +381,25 @@ function parseOutgoing(socket, data)
                                                 h: '%',
                                                 v: '+'
                                             }
-                                            if (userList[users[i]].owner)
+                                            if ('#' + users[i] == channel)
                                             {
                                                 modeChars += (config.broadcasterMode in letterToChar ? letterToChar[config.broadcasterMode] : '');
                                                 modeChars += '@';
                                             }
-                                            if (userList[users[i]].staff)
+                                            if (userList[users[i]].indexOf(config.staffMode) !== -1)
                                             {
                                                 modeChars += (config.staffMode in letterToChar ? letterToChar[config.staffMode] : '');
                                                 if (modeChars.indexOf('@') === -1) modeChars += '@';
                                             }
-                                            else if (userList[users[i]].admin)
+                                            else if (userList[users[i]].indexOf('a') !== -1)
                                             {
                                                 modeChars += '&';
                                                 if (modeChars.indexOf('@') === -1) modeChars += '@';
                                             }
-                                            else if (userList[users[i]].moderator && modeChars.indexOf('@') === -1) modeChars += '@';
+                                            else if (userList[users[i]].indexOf('o') !== -1 && modeChars.indexOf('@') === -1) modeChars += '@';
                                             
-                                            if (userList[users[i]].subscriber) modeChars += '%';
-                                            if (userList[users[i]].turbo) modeChars += '+';
+                                            if (userList[users[i]].indexOf('h') !== -1) modeChars += '%';
+                                            if (userList[users[i]].indexOf('v') !== -1) modeChars += '+';
                                             
                                             users[i] = modeChars + users[i];
                                         }
@@ -592,6 +512,65 @@ function parseOutgoing(socket, data)
 server.listen(config.relayPort);
 
 console.log("Started");
+
+function parseAndSendUserModes(socket, message, user)
+{
+    var channel = message.params[0];
+    var userList = socket.channels[channel].users;
+    
+    var modes = "";
+
+    if (channel.replace('#', '') === user)
+    {
+        modes += config.broadcasterMode + 'o';
+    }
+    
+    if (message.tags["user-type"] === 'staff')
+    {
+        modes += modes.indexOf('o') === -1 ? config.staffMode + 'o' : config.staffMode;
+    }
+    if (message.tags["user-type"] === 'admin' || message.tags["user-type"] === 'global_mod')
+    {
+        modes += modes.indexOf('o') === -1 ? "ao" : 'a';
+    }
+    if (message.tags["user-type"] === 'mod' && modes.indexOf('o') === -1)
+    {
+        modes += 'o';
+    }
+    if (message.tags.subscriber === '1')
+    {
+        modes += 'h';
+    }
+    if (message.tags.turbo === '1')
+    {
+        modes += 'v';
+    }
+    
+    var removedModes = "";
+    var removedNames = [];
+    for (var i = 0; i < userList[user].length; ++i)
+    {
+        if (modes.indexOf(userList[user][i]) === -1)
+        {
+            removedModes += userList[user][i];
+            removedNames.push(user);
+        }
+    }
+    
+    var names = [];
+    for (var i = 0; i < modes.length; ++i)
+    {
+        names.push(user);
+    }
+    
+    userList[user] = modes;
+    
+    if (removedModes.length > 0)
+        socket.write(':Twitch MODE ' + channel + ' -' + removedModes + ' ' + removedNames.join(' ') + '\r\n');
+    
+    if (modes.length > 0)
+        socket.write(':Twitch MODE ' + channel + ' +' + modes + ' ' + names.join(' ') + '\r\n');
+}
 
 function sendInParts(socket, data)
 {
