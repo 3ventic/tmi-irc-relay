@@ -350,7 +350,7 @@ function parseOutgoing(socket, data)
                                             }
                                             modes.push('-' + removeModes + ' ' + names.join(' '));
                                         }
-                                        if (userList[user] !== _modes)
+                                        if (userList[user] !== _modes && _modes.length > 0)
                                         {
                                             names = [];
                                             for (var j = 0; j < _modes.length; ++j)
@@ -582,7 +582,7 @@ function parseAndSendUserModes(socket, message, user)
     if (removedModes.length > 0)
         socket.write(':Twitch MODE ' + channel + ' -' + removedModes + ' ' + removedNames.join(' ') + '\r\n');
     
-    if (userList[user] !== modes)
+    if (userList[user] !== modes && modes.length > 0)
         socket.write(':Twitch MODE ' + channel + ' +' + modes + ' ' + names.join(' ') + '\r\n');
     
     userList[user] = modes;
