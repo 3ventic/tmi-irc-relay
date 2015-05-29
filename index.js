@@ -167,6 +167,7 @@ function parseIncoming(socket, data)
             if (message.tags)
             {
                 var user = message.prefix.split('!')[0];
+                var channel = message.params[0];
                 if (typeof socket.channels[channel].users[user] !== "string")
                 {
                     socket.channels[channel].users[user] = "";
