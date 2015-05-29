@@ -79,7 +79,7 @@ function parseIncoming(socket, data)
             socket.write(':Twitch NOTICE ' + channel + ' :Now hosting ' + params[0] + ' with ' + params[1] + ' viewers\r\n');
             return;
         case "CLEARCHAT":
-	    var channel = message.params[0];
+            var channel = message.params[0];
             if (message.params.length > 1)
             {
                 socket.write(':Twitch NOTICE ' + channel + ' :' + message.params[1].split(' ')[0] + ' has been timed out or banned\r\n');
@@ -340,10 +340,12 @@ function parseOutgoing(socket, data)
                                                 removeModes += userList[user][j];
                                             }
                                         }
-
+                                        
                                         var names = [];
+                                        var updated = false;
                                         if (removeModes.length > 0)
                                         {
+                                            updated = true;
                                             for (var j = 0; j < removeModes.length; ++j)
                                             {
                                                 names.push(user);
@@ -352,6 +354,7 @@ function parseOutgoing(socket, data)
                                         }
                                         if (userList[user] !== _modes && _modes.length > 0)
                                         {
+                                            updated = true;
                                             names = [];
                                             for (var j = 0; j < _modes.length; ++j)
                                             {
@@ -359,8 +362,9 @@ function parseOutgoing(socket, data)
                                             }
                                             modes.push('+' + _modes + ' ' + names.join(' '));
                                         }
-
-                                        userList[user] = _modes;
+                                        
+                                        if (updated)
+                                            userList[user] = _modes;
                                     });
                                 }
                                 
@@ -535,7 +539,7 @@ function parseAndSendUserModes(socket, message, user)
     var userList = socket.channels[channel].users;
     
     var modes = "";
-
+    
     if (channel.replace('#', '') === user)
     {
         modes += config.broadcasterMode + 'o';
@@ -579,13 +583,21 @@ function parseAndSendUserModes(socket, message, user)
         names.push(user);
     }
     
+    var updated = false;
     if (removedModes.length > 0)
+    {
+        updated = true;
         socket.write(':Twitch MODE ' + channel + ' -' + removedModes + ' ' + removedNames.join(' ') + '\r\n');
+    }
     
     if (userList[user] !== modes && modes.length > 0)
+    {
+        updated = true;
         socket.write(':Twitch MODE ' + channel + ' +' + modes + ' ' + names.join(' ') + '\r\n');
+    }
     
-    userList[user] = modes;
+    if (updated)
+        userList[user] = modes;
 }
 
 function sendInParts(socket, data)
@@ -595,10 +607,10 @@ function sendInParts(socket, data)
         // Has tags
         if (data[0] === '@')
         {
-            data = data.substring(data.indexOf(' :') + 1); 
+            data = data.substring(data.indexOf(' :') + 1);
         }
     }
-
+    
     // Message is already short enough
     if (data.length < 510)
     {
