@@ -352,6 +352,7 @@ function parseOutgoing(socket, data)
                                         }
                                         if (userList[user] !== _modes && _modes.length > 0)
                                         {
+                                            console.log(userList[user], _modes);
                                             names = [];
                                             for (var j = 0; j < _modes.length; ++j)
                                             {
