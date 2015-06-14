@@ -58,6 +58,13 @@ function parseIncoming(socket, data)
 {
     var message = Message(data);
     
+    // Nonsense?
+    if (!message)
+    {
+        console.log(data);
+        return;
+    }
+    
     switch (message.command)
     {
         case "PART":
