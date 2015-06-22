@@ -276,13 +276,16 @@ function parseOutgoing(socket, data)
                                     newUsers = newUsers.concat(data.chatters[chatterTypes[i]]);
                                 }
                                 
+                                if (newUsers.indexOf(socket.nick) === -1)
+                                    newUsers.push(socket.nick);
+
                                 var joins = [];
                                 var parts = [];
                                 var modes = [];
                                 
                                 currentUsers.forEach(function (user)
                                 {
-                                    if (newUsers.indexOf(user) === -1 && socket.nick !== user)
+                                    if (newUsers.indexOf(user) === -1)
                                     {
                                         delete userList[user];
                                         parts.push(user);
@@ -389,10 +392,6 @@ function parseOutgoing(socket, data)
                                         // Include modes
                                         for (var i = 0; i < users.length; i++)
                                         {
-                                            if (users[i] == socket.nick)
-                                            {
-                                                continue;
-                                            }
                                             var modeChars = "";
                                             var letterToChar = {
                                                 q: '~',
