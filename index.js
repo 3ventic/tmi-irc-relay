@@ -299,6 +299,9 @@ function parseOutgoing(socket, data)
                                     }
                                 });
                                 
+                                if (typeof userList[socket.nick] !== "string")
+                                    userList[socket.nick] = "";
+                                
                                 for (var i = 0; i < chatterTypes.length; i++)
                                 {
                                     data.chatters[chatterTypes[i]].forEach(function (user)
