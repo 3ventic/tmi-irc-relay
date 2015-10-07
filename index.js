@@ -74,6 +74,9 @@ function parseIncoming(socket, data)
             }
             break;
         case "JOIN":
+            if (!socket.channels[channel])
+                parseOutgoing(socket, "JOIN " + message.params[0]);
+            return;
         case "315": // WHO
         case "353": // NAMES
         case "366": // End of NAMES
@@ -175,6 +178,10 @@ function parseIncoming(socket, data)
             {
                 var user = message.prefix.split('!')[0];
                 var channel = message.params[0];
+                if (typeof socket.channels[channel] !== "object")
+                {
+                    
+                }
                 if (typeof socket.channels[channel].users[user] !== "string")
                 {
                     socket.channels[channel].users[user] = "";
@@ -199,10 +206,7 @@ function parseOutgoing(socket, data)
     if (message.command === 'NICK')
     {
         socket.nick = message.params[0].trim();
-        setTimeout(function ()
-        {
-            socket.irc.write('CAP REQ :twitch.tv/tags\r\nCAP REQ :twitch.tv/commands\r\nTWITCHCLIENT 4' + '\r\n');
-        }, 300);
+        socket.irc.write('CAP REQ :twitch.tv/tags twitch.tv/commands' + '\r\n');
     }
 
     else if (message.command === 'JOIN')
@@ -210,49 +214,24 @@ function parseOutgoing(socket, data)
         message.params[0].split(',').forEach(function (channel)
         {
             socket.write(':' + socket.nick + '!' + socket.nick + '@' + socket.nick + '.tmi.twitch.tv JOIN ' + channel + '\r\n');
-            socket.channels[channel] = {
-                joinSent: false,
-                users: {},
-                myModes: [],
-                topic: 'Welcome to the channel!',
-                timer: setInterval(function ()
-                {
-                    if (socket.channels[channel])
+            if (!socket.channels[channel])
+            {
+                socket.channels[channel] = {
+                    joinSent: false,
+                    users: {},
+                    myModes: [],
+                    topic: 'Welcome to the channel!',
+                    timer: setInterval(function ()
                     {
-                        socket.channels[channel].update();
-                    }
-                }, config.viewerListUpdateInterval * 1000),
-                update: function ()
-                {
-                    request.get({
-                        url: 'https://api.twitch.tv/kraken/channels/' + channel.replace('#', ''),
-                        json: true,
-                        timeout: 14000,
-                        headers: {
-                            'Client-ID': config.apiClientId
-                        }
-                    }, function (err, res, data)
-                    {
-                        if (err)
+                        if (socket.channels[channel])
                         {
-                            console.log(err);
-                            return;
+                            socket.channels[channel].update();
                         }
-                        // Check the channel wasn't parted during the request, which can take a long time
-                        if (!(channel in socket.channels))
-                        {
-                            return;
-                        }
-                        if (data && data.status && socket.channels[channel].topic !== data.status)
-                        {
-                            socket.channels[channel].topic = data.status;
-                            socket.write(':Twitch TOPIC ' + channel + ' :' + data.status + '\r\n');
-                        }
-                    });
-                    if (config.viwerListUpdateEnabled)
+                    }, config.viewerListUpdateInterval * 1000),
+                    update: function ()
                     {
                         request.get({
-                            url: 'https://tmi.twitch.tv/group/user/' + channel.replace('#', '') + '/chatters',
+                            url: 'https://api.twitch.tv/kraken/channels/' + channel.replace('#', ''),
                             json: true,
                             timeout: 14000,
                             headers: {
@@ -270,185 +249,213 @@ function parseOutgoing(socket, data)
                             {
                                 return;
                             }
-                            var userList = socket.channels[channel].users;
-                            
-                            if (data.chatters)
+                            if (data && data.status && socket.channels[channel].topic !== data.status)
                             {
-                                var currentUsers = Object.keys(userList);
-                                var newUsers = [];
-                                
-                                var chatterTypes = Object.keys(data.chatters);
-                                for (var i = 0; i < chatterTypes.length; i++)
-                                {
-                                    newUsers = newUsers.concat(data.chatters[chatterTypes[i]]);
-                                }
-                                
-                                if (newUsers.indexOf(socket.nick) === -1)
-                                    newUsers.push(socket.nick);
-
-                                var joins = [];
-                                var parts = [];
-                                var modes = [];
-                                
-                                currentUsers.forEach(function (user)
-                                {
-                                    if (newUsers.indexOf(user) === -1)
-                                    {
-                                        delete userList[user];
-                                        parts.push(user);
-                                    }
-                                });
-                                
-                                if (typeof userList[socket.nick] !== "string")
-                                    userList[socket.nick] = "";
-                                
-                                for (var i = 0; i < chatterTypes.length; i++)
-                                {
-                                    data.chatters[chatterTypes[i]].forEach(function (user)
-                                    {
-                                        if (user === socket.nick)
-                                        {
-                                            // don't handle yourself, causes duplicate JOINs and we already have our own MODEs from USERSTATE
-                                            return;
-                                        }
-                                        if (typeof userList[user] !== "string")
-                                        {
-                                            userList[user] = "";
-                                            joins.push(user);
-                                        }
-                                        
-                                        var _modes = "";
-                                        var removeModes = "";
-                                        
-                                        if (channel.replace('#', '') === user && userList[user].indexOf(config.broadcasterMode) === -1)
-                                        {
-                                            _modes += config.broadcasterMode + 'o';
-                                        }
-                                        if (chatterTypes[i] === 'staff' && userList[user].indexOf(config.staffMode) === -1)
-                                        {
-                                            _modes += _modes.indexOf('o') === -1 ? config.staffMode + 'o' : config.staffMode;
-                                        }
-                                        else if ((chatterTypes[i] === 'admins' || chatterTypes[i] === 'global_mods') && userList[user].indexOf('a') === -1)
-                                        {
-                                            _modes += 'ao';
-                                        }
-                                        else if (chatterTypes[i] === 'moderators' && userList[user].indexOf('o') === -1)
-                                        {
-                                            _modes += 'o';
-                                        }
-                                        else if (chatterTypes[i] === 'viewers' && data.chatters['moderators'].length > 0)
-                                        {
-                                            for (var j = 0; j < userList[user].length; ++j)
-                                            {
-                                                if (userList[user][j] === 'h')
-                                                {
-                                                    _modes += 'h';
-                                                    continue;
-                                                }
-                                                if (userList[user][j] === 'v')
-                                                {
-                                                    _modes += 'v';
-                                                    continue;
-                                                }
-                                                removeModes += userList[user][j];
-                                            }
-                                        }
-                                        
-                                        var names = [];
-                                        var updated = false;
-                                        if (removeModes.length > 0)
-                                        {
-                                            updated = true;
-                                            for (var j = 0; j < removeModes.length; ++j)
-                                            {
-                                                names.push(user);
-                                            }
-                                            modes.push('-' + removeModes + ' ' + names.join(' '));
-                                        }
-                                        if (userList[user] !== _modes && _modes.length > 0)
-                                        {
-                                            updated = true;
-                                            names = [];
-                                            for (var j = 0; j < _modes.length; ++j)
-                                            {
-                                                names.push(user);
-                                            }
-                                            modes.push('+' + _modes + ' ' + names.join(' '));
-                                        }
-                                        
-                                        if (updated)
-                                            userList[user] = _modes;
-                                    });
-                                }
-                                
-                                if (joins.length < 100)
-                                {
-                                    while (joins.length)
-                                    {
-                                        var user = joins.splice(0, 1).toString();
-                                        socket.write(':' + user + '!' + user + '@' + user + '.tmi.twitch.tv JOIN ' + channel + '\r\n');
-                                    }
-                                    while (parts.length)
-                                    {
-                                        var user = parts.splice(0, 1).toString();
-                                        socket.write(':' + user + '!' + user + '@' + user + '.tmi.twitch.tv PART ' + channel + '\r\n');
-                                    }
-                                }
-                                else
-                                {
-                                    while (newUsers.length)
-                                    {
-                                        var users = newUsers.splice(0, 15);
-                                        // Include modes
-                                        for (var i = 0; i < users.length; i++)
-                                        {
-                                            var modeChars = "";
-                                            var letterToChar = {
-                                                q: '~',
-                                                a: '&',
-                                                o: '@',
-                                                h: '%',
-                                                v: '+'
-                                            }
-                                            if ('#' + users[i] == channel)
-                                            {
-                                                modeChars += (config.broadcasterMode in letterToChar ? letterToChar[config.broadcasterMode] : '');
-                                                modeChars += '@';
-                                            }
-                                            if (userList[users[i]].indexOf(config.staffMode) !== -1)
-                                            {
-                                                modeChars += (config.staffMode in letterToChar ? letterToChar[config.staffMode] : '');
-                                                if (modeChars.indexOf('@') === -1) modeChars += '@';
-                                            }
-                                            else if (userList[users[i]].indexOf('a') !== -1)
-                                            {
-                                                modeChars += '&';
-                                                if (modeChars.indexOf('@') === -1) modeChars += '@';
-                                            }
-                                            else if (userList[users[i]].indexOf('o') !== -1 && modeChars.indexOf('@') === -1) modeChars += '@';
-                                            
-                                            if (userList[users[i]].indexOf('h') !== -1) modeChars += '%';
-                                            if (userList[users[i]].indexOf('v') !== -1) modeChars += '+';
-                                            
-                                            users[i] = modeChars + users[i];
-                                        }
-                                        users = users.join(' ');
-                                        socket.write(':tmi.twitch.tv 353 ' + socket.nick + ' = ' + channel + ' :' + users + '\r\n');
-                                    }
-                                    socket.write(':tmi.twitch.tv 366 ' + socket.nick + ' ' + channel + ' :End of /NAMES list\r\n');
-                                }
-                                
-                                while (modes.length)
-                                {
-                                    var mode = modes.splice(0, 1).toString();
-                                    socket.write(':Twitch MODE ' + channel + ' ' + mode + '\r\n');
-                                }
+                                socket.channels[channel].topic = data.status;
+                                socket.write(':Twitch TOPIC ' + channel + ' :' + data.status + '\r\n');
                             }
                         });
+                        if (config.viwerListUpdateEnabled)
+                        {
+                            request.get({
+                                url: 'https://tmi.twitch.tv/group/user/' + channel.replace('#', '') + '/chatters',
+                                json: true,
+                                timeout: 14000,
+                                headers: {
+                                    'Client-ID': config.apiClientId
+                                }
+                            }, function (err, res, data)
+                            {
+                                if (err)
+                                {
+                                    console.log(err);
+                                    return;
+                                }
+                                // Check the channel wasn't parted during the request, which can take a long time
+                                if (!(channel in socket.channels))
+                                {
+                                    return;
+                                }
+                                var userList = socket.channels[channel].users;
+                                
+                                if (data.chatters)
+                                {
+                                    var currentUsers = Object.keys(userList);
+                                    var newUsers = [];
+                                    
+                                    var chatterTypes = Object.keys(data.chatters);
+                                    for (var i = 0; i < chatterTypes.length; i++)
+                                    {
+                                        newUsers = newUsers.concat(data.chatters[chatterTypes[i]]);
+                                    }
+                                    
+                                    if (newUsers.indexOf(socket.nick) === -1)
+                                        newUsers.push(socket.nick);
+    
+                                    var joins = [];
+                                    var parts = [];
+                                    var modes = [];
+                                    
+                                    currentUsers.forEach(function (user)
+                                    {
+                                        if (newUsers.indexOf(user) === -1)
+                                        {
+                                            delete userList[user];
+                                            parts.push(user);
+                                        }
+                                    });
+                                    
+                                    if (typeof userList[socket.nick] !== "string")
+                                        userList[socket.nick] = "";
+                                    
+                                    for (var i = 0; i < chatterTypes.length; i++)
+                                    {
+                                        data.chatters[chatterTypes[i]].forEach(function (user)
+                                        {
+                                            if (user === socket.nick)
+                                            {
+                                                // don't handle yourself, causes duplicate JOINs and we already have our own MODEs from USERSTATE
+                                                return;
+                                            }
+                                            if (typeof userList[user] !== "string")
+                                            {
+                                                userList[user] = "";
+                                                joins.push(user);
+                                            }
+                                            
+                                            var _modes = "";
+                                            var removeModes = "";
+                                            
+                                            if (channel.replace('#', '') === user && userList[user].indexOf(config.broadcasterMode) === -1)
+                                            {
+                                                _modes += config.broadcasterMode + 'o';
+                                            }
+                                            if (chatterTypes[i] === 'staff' && userList[user].indexOf(config.staffMode) === -1)
+                                            {
+                                                _modes += _modes.indexOf('o') === -1 ? config.staffMode + 'o' : config.staffMode;
+                                            }
+                                            else if ((chatterTypes[i] === 'admins' || chatterTypes[i] === 'global_mods') && userList[user].indexOf('a') === -1)
+                                            {
+                                                _modes += 'ao';
+                                            }
+                                            else if (chatterTypes[i] === 'moderators' && userList[user].indexOf('o') === -1)
+                                            {
+                                                _modes += 'o';
+                                            }
+                                            else if (chatterTypes[i] === 'viewers' && data.chatters['moderators'].length > 0)
+                                            {
+                                                for (var j = 0; j < userList[user].length; ++j)
+                                                {
+                                                    if (userList[user][j] === 'h')
+                                                    {
+                                                        _modes += 'h';
+                                                        continue;
+                                                    }
+                                                    if (userList[user][j] === 'v')
+                                                    {
+                                                        _modes += 'v';
+                                                        continue;
+                                                    }
+                                                    removeModes += userList[user][j];
+                                                }
+                                            }
+                                            
+                                            var names = [];
+                                            var updated = false;
+                                            if (removeModes.length > 0)
+                                            {
+                                                updated = true;
+                                                for (var j = 0; j < removeModes.length; ++j)
+                                                {
+                                                    names.push(user);
+                                                }
+                                                modes.push('-' + removeModes + ' ' + names.join(' '));
+                                            }
+                                            if (userList[user] !== _modes && _modes.length > 0)
+                                            {
+                                                updated = true;
+                                                names = [];
+                                                for (var j = 0; j < _modes.length; ++j)
+                                                {
+                                                    names.push(user);
+                                                }
+                                                modes.push('+' + _modes + ' ' + names.join(' '));
+                                            }
+                                            
+                                            if (updated)
+                                                userList[user] = _modes;
+                                        });
+                                    }
+                                    
+                                    if (joins.length < 100)
+                                    {
+                                        while (joins.length)
+                                        {
+                                            var user = joins.splice(0, 1).toString();
+                                            socket.write(':' + user + '!' + user + '@' + user + '.tmi.twitch.tv JOIN ' + channel + '\r\n');
+                                        }
+                                        while (parts.length)
+                                        {
+                                            var user = parts.splice(0, 1).toString();
+                                            socket.write(':' + user + '!' + user + '@' + user + '.tmi.twitch.tv PART ' + channel + '\r\n');
+                                        }
+                                    }
+                                    else
+                                    {
+                                        while (newUsers.length)
+                                        {
+                                            var users = newUsers.splice(0, 15);
+                                            // Include modes
+                                            for (var i = 0; i < users.length; i++)
+                                            {
+                                                var modeChars = "";
+                                                var letterToChar = {
+                                                    q: '~',
+                                                    a: '&',
+                                                    o: '@',
+                                                    h: '%',
+                                                    v: '+'
+                                                }
+                                                if ('#' + users[i] == channel)
+                                                {
+                                                    modeChars += (config.broadcasterMode in letterToChar ? letterToChar[config.broadcasterMode] : '');
+                                                    modeChars += '@';
+                                                }
+                                                if (userList[users[i]].indexOf(config.staffMode) !== -1)
+                                                {
+                                                    modeChars += (config.staffMode in letterToChar ? letterToChar[config.staffMode] : '');
+                                                    if (modeChars.indexOf('@') === -1) modeChars += '@';
+                                                }
+                                                else if (userList[users[i]].indexOf('a') !== -1)
+                                                {
+                                                    modeChars += '&';
+                                                    if (modeChars.indexOf('@') === -1) modeChars += '@';
+                                                }
+                                                else if (userList[users[i]].indexOf('o') !== -1 && modeChars.indexOf('@') === -1) modeChars += '@';
+                                                
+                                                if (userList[users[i]].indexOf('h') !== -1) modeChars += '%';
+                                                if (userList[users[i]].indexOf('v') !== -1) modeChars += '+';
+                                                
+                                                users[i] = modeChars + users[i];
+                                            }
+                                            users = users.join(' ');
+                                            socket.write(':tmi.twitch.tv 353 ' + socket.nick + ' = ' + channel + ' :' + users + '\r\n');
+                                        }
+                                        socket.write(':tmi.twitch.tv 366 ' + socket.nick + ' ' + channel + ' :End of /NAMES list\r\n');
+                                    }
+                                    
+                                    while (modes.length)
+                                    {
+                                        var mode = modes.splice(0, 1).toString();
+                                        socket.write(':Twitch MODE ' + channel + ' ' + mode + '\r\n');
+                                    }
+                                }
+                            });
+                        }
                     }
                 }
+                socket.channels[channel].update();
             }
-            socket.channels[channel].update();
         });
     }
 
