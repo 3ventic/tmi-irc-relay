@@ -486,6 +486,7 @@ function parseOutgoing(socket, data)
 
     else if (message.command === 'KICK' || message.command.toUpperCase() === 'TIMEOUT')
     {
+        if (!message.params[1]) message.params[1] = '';
         if (!message.params[2]) message.params[2] = '600';
         socket.irc.write(':tmi.twitch.tv PRIVMSG ' + message.params[0] + ' :/timeout ' + message.params[1].trim() + ' ' + message.params[2].trim() + '\r\n');
         socket.write(':Twitch NOTICE ' + message.params[0] + ' :You have timed out ' + message.params[1].trim() + ' for ' + message.params[2] + ' seconds.' + '\r\n');
