@@ -182,7 +182,7 @@ function parseIncoming(socket, data)
                 {
                     
                 }
-                if (typeof socket.channels[channel].users[user] !== "string")
+                else if (typeof socket.channels[channel].users[user] !== "string")
                 {
                     socket.channels[channel].users[user] = "";
                     socket.write(':' + user + '!' + user + '@' + user + '.tmi.twitch.tv JOIN ' + channel + '\r\n');
