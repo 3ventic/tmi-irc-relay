@@ -92,7 +92,17 @@ function parseIncoming(socket, data)
             var channel = message.params[0];
             if (message.params.length > 1)
             {
-                socket.write(':Twitch NOTICE ' + channel + ' :' + message.params[1].split(' ')[0] + ' has been timed out or banned\r\n');
+                var details = "";
+                if ('ban-duration' in message.tags) {
+                    details += "timed out for " + message.tags['ban-duration'] + " seconds"
+                }
+                else {
+                    details += "banned"
+                }
+                if ('ban-reason' in message.tags) {
+                    details += " for \"" + unescapeTag(message.tags['ban-reason']) + "\""
+                }
+                socket.write(':Twitch NOTICE ' + channel + ' :' + message.params[1].split(' ')[0] + ' has been ' + details + '\r\n');
             }
             else
             {
@@ -486,6 +496,7 @@ function parseOutgoing(socket, data)
 
     else if (message.command === 'KICK' || message.command.toUpperCase() === 'TIMEOUT')
     {
+        if (!message.params[1]) message.params[1] = '';
         if (!message.params[2]) message.params[2] = '600';
         socket.irc.write(':tmi.twitch.tv PRIVMSG ' + message.params[0] + ' :/timeout ' + message.params[1].trim() + ' ' + message.params[2].trim() + '\r\n');
         socket.write(':Twitch NOTICE ' + message.params[0] + ' :You have timed out ' + message.params[1].trim() + ' for ' + message.params[2] + ' seconds.' + '\r\n');
@@ -647,4 +658,8 @@ function sendInParts(socket, data)
     {
         socket.write(tags + messageStart + messageEnd.substr(i * messageLength, messageLength) + '\r\n');
     }
+}
+
+function unescapeTag(tag) {
+    return tag.replace(/\\s/g, ' ').replace(/\\:/g, ';').replace(/\\\\/g, '\\').replace(/\\r/g, '').replace(/\\n/g, '\u23CE');
 }
