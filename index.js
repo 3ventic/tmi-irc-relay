@@ -99,7 +99,7 @@ function parseIncoming(socket, data)
                 else {
                     details += "banned"
                 }
-                if ('ban-reason' in message.tags) {
+                if ('ban-reason' in message.tags && message.tags['ban-reason'].length > 0) {
                     details += " for \"" + unescapeTag(message.tags['ban-reason']) + "\""
                 }
                 socket.write(':Twitch NOTICE ' + channel + ' :' + message.params[1].split(' ')[0] + ' has been ' + details + '\r\n');
