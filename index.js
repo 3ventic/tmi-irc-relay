@@ -276,7 +276,7 @@ function parseOutgoing(socket, data)
                                 }
                             }, function (err, res, data)
                             {
-                                if (err)
+                                if (err || !data)
                                 {
                                     console.log(err);
                                     return;
