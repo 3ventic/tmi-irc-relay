@@ -64,6 +64,8 @@ function parseIncoming(socket, data)
         console.log('no msg', data);
         return;
     }
+
+	console.log("IN", message);
     
     switch (message.command)
     {
@@ -212,7 +214,7 @@ function parseIncoming(socket, data)
 function parseOutgoing(socket, data)
 {
     var message = Message(data);
-	console.log(message);
+	console.log("OUT", message);
     
     if (message.command === 'NICK')
     {
