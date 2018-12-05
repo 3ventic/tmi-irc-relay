@@ -35,11 +35,11 @@ var server = net.createServer(function (socket)
     });
     socket.on('error', function (e)
     {
-        console.log(e);
+        console.log('socket error', e);
     });
     socket.irc.on('error', function (e)
     {
-        console.log(e);
+        console.log('socket.irc error', e);
     });
     socket.irc.on('close', function ()
     {
@@ -61,7 +61,7 @@ function parseIncoming(socket, data)
     // Nonsense?
     if (!message)
     {
-        console.log(data);
+        console.log('no msg', data);
         return;
     }
     
@@ -74,8 +74,8 @@ function parseIncoming(socket, data)
             }
             break;
         case "JOIN":
-            if (!socket.channels[channel])
-                parseOutgoing(socket, "JOIN " + message.params[0]);
+            //if (!socket.channels[channel])
+                //parseOutgoing(socket, "JOIN " + message.params[0]);
             return;
         case "315": // WHO
         case "353": // NAMES
@@ -212,6 +212,7 @@ function parseIncoming(socket, data)
 function parseOutgoing(socket, data)
 {
     var message = Message(data);
+	console.log(message);
     
     if (message.command === 'NICK')
     {
@@ -223,6 +224,7 @@ function parseOutgoing(socket, data)
     {
         message.params[0].split(',').forEach(function (channel)
         {
+			console.log("sending join for", channel);
             socket.write(':' + socket.nick + '!' + socket.nick + '@' + socket.nick + '.tmi.twitch.tv JOIN ' + channel + '\r\n');
             if (!socket.channels[channel])
             {
@@ -278,7 +280,7 @@ function parseOutgoing(socket, data)
                             {
                                 if (err || !data)
                                 {
-                                    console.log(err);
+                                    console.log(err, data, res.statusCode);
                                     return;
                                 }
                                 // Check the channel wasn't parted during the request, which can take a long time
